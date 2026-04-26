@@ -1,0 +1,36 @@
+# Claude Code session state
+.claude/
+skills-lock.json
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env vars (NEVER commit)
+.env
+.env.local
+.env.*.local
+
+# Python pipeline
+pipeline/.venv/
+pipeline/__pycache__/
+pipeline/**/__pycache__/
+pipeline/.python-version
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Supabase local dev
+supabase/.branches
+supabase/.temp
+
+# Logs / OS / editor
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
