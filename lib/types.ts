@@ -38,6 +38,24 @@ export type SortKey = "rank" | "food" | "service" | "volume" | "recent";
 export type Filters = {
   cuisine: string | null;
   neighborhood: string | null;
-  /** When true, show only restaurants with no negative service mentions */
+  priceLevel: 1 | 2 | 3 | 4 | null;
+  /** When true, hide restaurants whose service score is below 0.7. Restaurants
+   * with no service data are kept (no complaints != negative). */
   noServiceComplaints: boolean;
 };
+
+export const EMPTY_FILTERS: Filters = {
+  cuisine: null,
+  neighborhood: null,
+  priceLevel: null,
+  noServiceComplaints: false,
+};
+
+export function hasActiveFilters(f: Filters): boolean {
+  return (
+    f.cuisine !== null ||
+    f.neighborhood !== null ||
+    f.priceLevel !== null ||
+    f.noServiceComplaints
+  );
+}
