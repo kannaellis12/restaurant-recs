@@ -73,7 +73,12 @@ export type FlagWithContext = {
               reddit_id: string;
               body: string;
               author: string | null;
-              thread: { subreddit: string; title: string; url: string } | null;
+              thread: {
+                subreddit: string;
+                title: string;
+                url: string;
+                city_slug: string | null;
+              } | null;
             }
           | null;
       }
@@ -108,10 +113,10 @@ async function loadOpenFlags(): Promise<FlagWithContext[]> {
           reddit_id,
           body,
           author,
-          thread:reddit_threads ( subreddit, title, url )
+          thread:reddit_threads ( subreddit, title, url, city_slug )
         )
       ),
-      restaurant:restaurants ( name, address, website, place_id )
+      restaurant:restaurants ( id, name, address, website, place_id )
       `,
     )
     .eq("status", "open")

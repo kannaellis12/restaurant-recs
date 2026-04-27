@@ -1,6 +1,8 @@
 import { resolveFlag, dismissFlag } from "./actions";
 import type { FlagWithContext } from "./page";
 import { CuisineAssignment } from "./CuisineAssignment";
+import { ManualReassign } from "./ManualReassign";
+import { MissingCuisineActions } from "./MissingCuisineActions";
 
 /**
  * Build a Reddit URL that scrolls to the specific comment. Without this,
@@ -147,7 +149,10 @@ function LowConfidenceCard({ flag }: { flag: FlagWithContext }) {
         </details>
       )}
 
-      <div className="mt-5 flex gap-2 justify-end">
+      <div className="mt-5 flex gap-2 justify-end items-center flex-wrap">
+        {thread?.city_slug && (
+          <ManualReassign flagId={flag.id} citySlug={thread.city_slug} />
+        )}
         <form action={dismissFlag}>
           <input type="hidden" name="flagId" value={flag.id} />
           <button
@@ -175,12 +180,21 @@ function LowConfidenceCard({ flag }: { flag: FlagWithContext }) {
  * Card for `kind = missing_cuisine` — Google Places types didn't map to any
  * of our 26 cuisines, so we ask the admin to pick the right one(s).
  */
-function MissingCuisineCard({ flag }: { flag: FlagWithContext }) {
+function MissingCuisineCard({
+  flag,
+}: {
+  flag: FlagWithContext & { restaurant_id?: string | null };
+}) {
   const rest = flag.restaurant;
   const fallbackName =
     typeof flag.details?.restaurant_name === "string"
       ? (flag.details.restaurant_name as string)
       : "(unknown restaurant)";
+
+  // The page query selects flag.restaurant via FK, but the FK column itself
+  // (restaurant_id) isn't included. Flags with kind=missing_cuisine always
+  // have it — pull it from the embedded restaurant row's id.
+  const restaurantId = (flag as { restaurant?: { id?: string } | null }).restaurant?.id;
 
   return (
     <article className="border border-gray-200 dark:border-gray-800 rounded-lg p-5">
@@ -212,6 +226,16 @@ function MissingCuisineCard({ flag }: { flag: FlagWithContext }) {
       </div>
 
       <CuisineAssignment flagId={flag.id} />
+
+      {restaurantId && (
+        <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
+          <MissingCuisineActions
+            flagId={flag.id}
+            restaurantId={restaurantId}
+            currentWebsite={rest?.website ?? null}
+          />
+        </div>
+      )}
     </article>
   );
 }

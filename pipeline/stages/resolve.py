@@ -41,6 +41,7 @@ FIELD_MASK = ",".join(
         "places.rating",
         "places.userRatingCount",
         "places.types",
+        "places.businessStatus",
     ]
 )
 
@@ -165,6 +166,23 @@ def resolve_mention(
             ),
         )
 
+    # Drop permanently-closed places. Temporarily closed (CLOSED_TEMPORARILY)
+    # are kept — they may reopen and we still want the historical signal.
+    candidates = [
+        c for c in candidates if c.business_status != "CLOSED_PERMANENTLY"
+    ]
+    if not candidates:
+        return ResolveResult(
+            mention=mention,
+            city_slug=city_slug,
+            neighborhood_hint=neighborhood_hint,
+            method="no_match",
+            confidence=0.0,
+            reasoning=(
+                f"All Google results for {query!r} are permanently closed."
+            ),
+        )
+
     top = candidates[0]
 
     name_matches = _names_overlap(mention, top.name)
@@ -267,6 +285,7 @@ def _to_candidate(place: dict) -> PlaceCandidate:
         types=place.get("types") or [],
         google_rating=place.get("rating"),
         google_review_ct=place.get("userRatingCount"),
+        business_status=place.get("businessStatus"),
     )
 
 

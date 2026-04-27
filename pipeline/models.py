@@ -49,6 +49,8 @@ class PlaceCandidate(BaseModel):
     types: list[str] = Field(default_factory=list)
     google_rating: Optional[float] = None
     google_review_ct: Optional[int] = None
+    # OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY | None
+    business_status: Optional[str] = None
 
 
 class ResolveResult(BaseModel):
