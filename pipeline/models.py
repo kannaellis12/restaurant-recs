@@ -51,6 +51,9 @@ class PlaceCandidate(BaseModel):
     google_review_ct: Optional[int] = None
     # OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY | None
     business_status: Optional[str] = None
+    # Derived from addressComponents — used as a fallback when no Reddit
+    # comment mentioned a neighborhood for this restaurant.
+    derived_neighborhood: Optional[str] = None
 
 
 class ResolveResult(BaseModel):

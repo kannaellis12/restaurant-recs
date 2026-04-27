@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { adminClient } from "@/lib/supabase-admin";
+import { CITIES_BY_SLUG } from "@/lib/cities";
 import { LoginForm } from "./LoginForm";
 import { FlagCard } from "./FlagCard";
+import { RestaurantEditor, type EditableRestaurant } from "./RestaurantEditor";
 import { logout } from "./actions";
 
 // Always render fresh — mutations need to show up immediately.
@@ -18,10 +20,13 @@ export default async function AdminPage() {
     return <LoginForm />;
   }
 
-  const flags = await loadOpenFlags();
+  const [flags, restaurantsByCity] = await Promise.all([
+    loadOpenFlags(),
+    loadRestaurantsByCity(),
+  ]);
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-8">
+    <main className="max-w-4xl mx-auto px-6 py-8">
       <header className="flex items-baseline justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
         <div>
           <h1 className="text-2xl font-bold">Admin</h1>
@@ -39,17 +44,53 @@ export default async function AdminPage() {
         </form>
       </header>
 
-      {flags.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          Nothing to review. The pipeline writes flags here when resolution confidence is low.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {flags.map((f) => (
-            <FlagCard key={f.id} flag={f} />
-          ))}
-        </div>
-      )}
+      <section className="mb-12">
+        <h2 className="text-lg font-bold mb-3">Open flags</h2>
+        {flags.length === 0 ? (
+          <div className="text-sm text-gray-500 py-6">
+            Nothing to review. The pipeline writes flags here when resolution
+            confidence is low.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {flags.map((f) => (
+              <FlagCard key={f.id} flag={f} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-bold mb-3">All restaurants</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Edit any field on any restaurant — neighborhood, cuisines, price,
+          website, or mark permanently closed. Useful when Google&apos;s data
+          is wonky (Lasley, Barths, La Foret-the-restaurant-named-after-itself).
+        </p>
+        {Object.entries(restaurantsByCity).map(([citySlug, restaurants]) => {
+          const city = CITIES_BY_SLUG[citySlug];
+          return (
+            <div key={citySlug} className="mb-8">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                {city?.name ?? citySlug} · {restaurants.length}
+              </h3>
+              <div className="grid grid-cols-[2fr_1.2fr_1.5fr_0.5fr_1.2fr_auto] gap-3 items-baseline pb-1 mb-1 border-b-2 border-gray-300 dark:border-gray-700 text-xs uppercase tracking-wide text-gray-500">
+                <div>Name</div>
+                <div>Neighborhood</div>
+                <div>Cuisines</div>
+                <div>Price</div>
+                <div>Website</div>
+                <div></div>
+              </div>
+              <div>
+                {restaurants.map((r) => (
+                  <RestaurantEditor key={r.id} restaurant={r} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </section>
     </main>
   );
 }
@@ -90,6 +131,30 @@ export type FlagWithContext = {
     place_id: string;
   } | null;
 };
+
+async function loadRestaurantsByCity(): Promise<Record<string, EditableRestaurant[]>> {
+  const supabase = adminClient();
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("id, name, address, neighborhood, cuisines, price_level, website, city_slug")
+    .eq("closed", false)
+    .order("name", { ascending: true });
+  if (error) throw new Error(`Failed to load restaurants: ${error.message}`);
+  const byCity: Record<string, EditableRestaurant[]> = {};
+  for (const r of data ?? []) {
+    const slug = r.city_slug as string;
+    (byCity[slug] ??= []).push({
+      id: r.id as string,
+      name: r.name as string,
+      address: (r.address as string | null) ?? null,
+      neighborhood: (r.neighborhood as string | null) ?? null,
+      cuisines: (r.cuisines as string[] | null) ?? [],
+      price_level: (r.price_level as number | null) ?? null,
+      website: (r.website as string | null) ?? null,
+    });
+  }
+  return byCity;
+}
 
 async function loadOpenFlags(): Promise<FlagWithContext[]> {
   const supabase = adminClient();

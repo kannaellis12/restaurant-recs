@@ -197,13 +197,15 @@ export async function assignCuisines(formData: FormData): Promise<void> {
 
 /**
  * Mark a restaurant as closed (Google says it's permanently shut, OR an admin
- * has decided it's gone). Also dismisses the flag since the cuisine question
- * is moot — closed restaurants don't appear on /[city].
+ * has decided it's gone). Also dismisses the flag if one was provided —
+ * closed restaurants don't appear on /[city] and any open flag for them is
+ * moot. Called from both the missing_cuisine card (with a flag) and the
+ * standalone restaurant editor (no flag).
  */
 export async function markRestaurantClosed(formData: FormData): Promise<void> {
   const flagId = String(formData.get("flagId") ?? "");
   const restaurantId = String(formData.get("restaurantId") ?? "");
-  if (!flagId || !restaurantId) return;
+  if (!restaurantId) return;
 
   const supabase = adminClient();
 
@@ -212,14 +214,60 @@ export async function markRestaurantClosed(formData: FormData): Promise<void> {
     .update({ closed: true })
     .eq("id", restaurantId);
 
-  await supabase
-    .from("flags")
+  if (flagId) {
+    await supabase
+      .from("flags")
+      .update({
+        status: "dismissed",
+        resolved_at: new Date().toISOString(),
+        resolved_by: "admin",
+      })
+      .eq("id", flagId);
+  }
+
+  revalidatePath("/admin");
+}
+
+/**
+ * General-purpose restaurant editor used by the "All restaurants" admin
+ * section. Updates neighborhood, cuisines, price level, and website in one
+ * call. Form always submits all four fields with current values pre-filled,
+ * so we just write whatever came in.
+ */
+export async function updateRestaurant(formData: FormData): Promise<void> {
+  const restaurantId = String(formData.get("restaurantId") ?? "");
+  if (!restaurantId) return;
+
+  const neighborhood =
+    String(formData.get("neighborhood") ?? "").trim() || null;
+
+  const cuisines = formData
+    .getAll("cuisines")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const priceRaw = String(formData.get("priceLevel") ?? "");
+  const priceLevel = priceRaw
+    ? Math.min(4, Math.max(1, parseInt(priceRaw, 10))) || null
+    : null;
+
+  const websiteRaw = String(formData.get("website") ?? "").trim();
+  const website = websiteRaw
+    ? /^https?:\/\//i.test(websiteRaw)
+      ? websiteRaw
+      : `https://${websiteRaw}`
+    : null;
+
+  await adminClient()
+    .from("restaurants")
     .update({
-      status: "dismissed",
-      resolved_at: new Date().toISOString(),
-      resolved_by: "admin",
+      neighborhood,
+      cuisines,
+      price_level: priceLevel,
+      website,
     })
-    .eq("id", flagId);
+    .eq("id", restaurantId);
 
   revalidatePath("/admin");
 }

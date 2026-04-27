@@ -128,10 +128,15 @@ def main() -> int:
                 restaurant_id = None
                 if r.candidate and r.confidence >= 0.6:
                     inferred_cuisines = cuisines_from_types(r.candidate.types)
+                    # Prefer the Reddit comment's neighborhood mention; fall
+                    # back to whatever Google's addressComponents say.
+                    neighborhood = (
+                        e.neighborhood_hint or r.candidate.derived_neighborhood
+                    )
                     restaurant_id = db.upsert_restaurant(
                         candidate=r.candidate,
                         city_slug=args.city,
-                        neighborhood=e.neighborhood_hint,
+                        neighborhood=neighborhood,
                         cuisines=inferred_cuisines,
                     )
                     # If Google's types didn't yield any of our 26 cuisines,

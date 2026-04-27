@@ -8,6 +8,8 @@ export const CUISINES: Cuisine[] = [
   { slug: "american-fine-dining", label: "American (Fine Dining)" },
   { slug: "bbq", label: "BBQ" },
   { slug: "steakhouse", label: "Steakhouse" },
+  { slug: "butcher", label: "Butcher / Charcuterie" },
+  { slug: "deli", label: "Deli" },
   { slug: "pizza", label: "Pizza" },
   { slug: "italian", label: "Italian" },
   { slug: "french", label: "French (Bistro / Brasserie)" },
@@ -29,6 +31,7 @@ export const CUISINES: Cuisine[] = [
   { slug: "vegetarian-vegan", label: "Vegetarian / Vegan" },
   { slug: "brunch-breakfast", label: "Brunch / Breakfast" },
   { slug: "bakery-cafe-dessert", label: "Bakery / Cafe / Dessert" },
+  { slug: "cocktails", label: "Cocktails" },
   { slug: "bar-gastropub", label: "Bar / Gastropub" },
 ];
 

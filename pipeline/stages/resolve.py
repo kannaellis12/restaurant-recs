@@ -42,8 +42,16 @@ FIELD_MASK = ",".join(
         "places.userRatingCount",
         "places.types",
         "places.businessStatus",
+        "places.addressComponents",
     ]
 )
+
+
+# Address-component types we'll accept as a "neighborhood", in priority order.
+# `neighborhood` is most specific; `sublocality_level_1` is the common fallback
+# in cities where Google doesn't tag explicit neighborhoods. `sublocality`
+# itself is a coarser parent — last resort.
+_NEIGHBORHOOD_TYPES = ("neighborhood", "sublocality_level_1", "sublocality")
 
 # Google Places Text Search API price-level enum -> our integer scale.
 PRICE_LEVEL_MAP = {
@@ -286,7 +294,30 @@ def _to_candidate(place: dict) -> PlaceCandidate:
         google_rating=place.get("rating"),
         google_review_ct=place.get("userRatingCount"),
         business_status=place.get("businessStatus"),
+        derived_neighborhood=neighborhood_from_components(place.get("addressComponents")),
     )
+
+
+def neighborhood_from_components(components: Optional[list]) -> Optional[str]:
+    """Pick the best neighborhood-ish name out of Google's addressComponents.
+
+    Prefers more specific types (`neighborhood`) over coarser ones
+    (`sublocality_level_1`, `sublocality`). Returns None if none found —
+    common in cities/areas where Google doesn't tag neighborhood data.
+    """
+    if not components:
+        return None
+    by_type: dict = {}
+    for c in components:
+        types = c.get("types") or []
+        for t in types:
+            if t in _NEIGHBORHOOD_TYPES and t not in by_type:
+                by_type[t] = c.get("longText") or c.get("shortText")
+    for t in _NEIGHBORHOOD_TYPES:
+        val = by_type.get(t)
+        if val:
+            return val
+    return None
 
 
 def _names_overlap(mention: str, place_name: str) -> bool:
@@ -340,6 +371,10 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     "barbecue_restaurant":      "bbq",
     # Steakhouse
     "steak_house":              "steakhouse",
+    # Butcher / Charcuterie (whole cuts, prep — like Butchers at RiNo)
+    "butcher_shop":             "butcher",
+    # Deli (sandwiches + cured meats — like Carmine Lonardo's, NY-style delis)
+    "deli":                     "deli",
     # Pizza
     "pizza_restaurant":         "pizza",
     # Italian
@@ -385,6 +420,9 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     "ice_cream_shop":           "bakery-cafe-dessert",
     "dessert_shop":             "bakery-cafe-dessert",
     "donut_shop":               "bakery-cafe-dessert",
+    # Cocktails (Google's type set is sparse here — admin will tag most
+    # cocktail bars manually via the /admin restaurant editor).
+    "cocktail_bar":             "cocktails",
     # Bar / Gastropub
     "bar":                      "bar-gastropub",
     "bar_and_grill":            "bar-gastropub",
@@ -497,10 +535,13 @@ def reresolve_unresolved_extractions(city_slug: str) -> dict:
             reasoning=result.reasoning,
         )
         if result.candidate and result.confidence >= 0.6:
+            neighborhood = (
+                ext.get("neighborhood_hint") or result.candidate.derived_neighborhood
+            )
             rest_id = db.upsert_restaurant(
                 candidate=result.candidate,
                 city_slug=city_slug,
-                neighborhood=ext.get("neighborhood_hint"),
+                neighborhood=neighborhood,
                 cuisines=cuisines_from_types(result.candidate.types),
             )
             client.table("extractions").update(

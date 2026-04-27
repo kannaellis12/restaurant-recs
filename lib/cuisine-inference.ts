@@ -17,6 +17,10 @@ const PLACES_TYPE_TO_CUISINE: Record<string, string> = {
   barbecue_restaurant: "bbq",
   // Steakhouse
   steak_house: "steakhouse",
+  // Butcher / Charcuterie
+  butcher_shop: "butcher",
+  // Deli
+  deli: "deli",
   // Pizza
   pizza_restaurant: "pizza",
   // Italian
@@ -62,6 +66,8 @@ const PLACES_TYPE_TO_CUISINE: Record<string, string> = {
   ice_cream_shop: "bakery-cafe-dessert",
   dessert_shop: "bakery-cafe-dessert",
   donut_shop: "bakery-cafe-dessert",
+  // Cocktails (Google's types are sparse — admin tags most manually)
+  cocktail_bar: "cocktails",
   // Bar / Gastropub
   bar: "bar-gastropub",
   bar_and_grill: "bar-gastropub",
