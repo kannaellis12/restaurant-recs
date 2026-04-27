@@ -7,6 +7,7 @@ import { adminClient } from "@/lib/supabase-admin";
 import { CITIES_BY_SLUG } from "@/lib/cities";
 import { cuisinesFromTypes } from "@/lib/cuisine-inference";
 import { fetchPlaceById, searchPlaces, type PlaceLite } from "@/lib/google-places";
+import { computeScoresForCity } from "@/lib/score";
 
 const AUTH_COOKIE = "admin-auth";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -55,6 +56,20 @@ export async function resolveFlag(formData: FormData): Promise<void> {
     })
     .eq("id", flagId);
   revalidatePath("/admin");
+}
+
+/**
+ * Recompute scores for one city. Mirror of pipeline/stages/score.py;
+ * triggered by the /admin "Recompute scores" button so admin actions
+ * (reassign / dismiss) reflect on /[city] without waiting for the next
+ * pipeline run. Returns the number of restaurants scored.
+ */
+export async function recomputeScores(formData: FormData): Promise<void> {
+  const citySlug = String(formData.get("citySlug") ?? "");
+  if (!citySlug) return;
+  await computeScoresForCity(citySlug);
+  revalidatePath("/admin");
+  revalidatePath(`/${citySlug}`);
 }
 
 /**
@@ -196,11 +211,55 @@ export async function assignCuisines(formData: FormData): Promise<void> {
 }
 
 /**
+ * Mark something as NOT a restaurant — false positive that slipped past the
+ * resolver (e.g. a martial-arts gym, a city name, a truck dealer). Distinct
+ * from `markRestaurantClosed` because it ALSO nulls out every extraction
+ * attached to this row and zeros its vote_weight, so the bogus signal stops
+ * counting toward any future scoring.
+ */
+export async function markNotARestaurant(formData: FormData): Promise<void> {
+  const flagId = String(formData.get("flagId") ?? "");
+  const restaurantId = String(formData.get("restaurantId") ?? "");
+  if (!restaurantId) return;
+
+  const supabase = adminClient();
+
+  await supabase
+    .from("restaurants")
+    .update({ closed: true })
+    .eq("id", restaurantId);
+
+  // Null out every extraction tied to this row. The extractions still exist
+  // (so comment_has_extractions returns true and the orchestrator won't
+  // re-process those comments), but they no longer contribute to scoring.
+  await supabase
+    .from("extractions")
+    .update({ restaurant_id: null, vote_weight: 0 })
+    .eq("restaurant_id", restaurantId);
+
+  if (flagId) {
+    await supabase
+      .from("flags")
+      .update({
+        status: "dismissed",
+        resolved_at: new Date().toISOString(),
+        resolved_by: "admin",
+      })
+      .eq("id", flagId);
+  }
+
+  revalidatePath("/admin");
+}
+
+/**
  * Mark a restaurant as closed (Google says it's permanently shut, OR an admin
  * has decided it's gone). Also dismisses the flag if one was provided —
  * closed restaurants don't appear on /[city] and any open flag for them is
  * moot. Called from both the missing_cuisine card (with a flag) and the
  * standalone restaurant editor (no flag).
+ *
+ * Distinct from `markNotARestaurant`: this action KEEPS the extractions
+ * intact since they were legitimate reviews of a place that just shut down.
  */
 export async function markRestaurantClosed(formData: FormData): Promise<void> {
   const flagId = String(formData.get("flagId") ?? "");

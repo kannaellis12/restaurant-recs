@@ -4,7 +4,7 @@ import { CITIES_BY_SLUG } from "@/lib/cities";
 import { LoginForm } from "./LoginForm";
 import { FlagCard } from "./FlagCard";
 import { RestaurantEditor, type EditableRestaurant } from "./RestaurantEditor";
-import { logout } from "./actions";
+import { logout, recomputeScores } from "./actions";
 
 // Always render fresh — mutations need to show up immediately.
 export const dynamic = "force-dynamic";
@@ -71,9 +71,21 @@ export default async function AdminPage() {
           const city = CITIES_BY_SLUG[citySlug];
           return (
             <div key={citySlug} className="mb-8">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
-                {city?.name ?? citySlug} · {restaurants.length}
-              </h3>
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  {city?.name ?? citySlug} · {restaurants.length}
+                </h3>
+                <form action={recomputeScores}>
+                  <input type="hidden" name="citySlug" value={citySlug} />
+                  <button
+                    type="submit"
+                    className="text-xs border border-gray-300 dark:border-gray-700 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-900"
+                    title="Re-aggregate extractions into restaurant_scores. Use after dismissing/reassigning flags so /[city] reflects your changes."
+                  >
+                    Recompute scores
+                  </button>
+                </form>
+              </div>
               <div className="grid grid-cols-[2fr_1.2fr_1.5fr_0.5fr_1.2fr_auto] gap-3 items-baseline pb-1 mb-1 border-b-2 border-gray-300 dark:border-gray-700 text-xs uppercase tracking-wide text-gray-500">
                 <div>Name</div>
                 <div>Neighborhood</div>
@@ -94,6 +106,19 @@ export default async function AdminPage() {
     </main>
   );
 }
+
+export type SampleExtraction = {
+  mention_text: string;
+  quote_original: string;
+  comment:
+    | {
+        reddit_id: string;
+        body: string;
+        author: string | null;
+        thread: { subreddit: string; title: string; url: string } | null;
+      }
+    | null;
+};
 
 export type FlagWithContext = {
   id: string;
@@ -125,11 +150,15 @@ export type FlagWithContext = {
       }
     | null;
   restaurant: {
+    id: string;
     name: string;
     address: string | null;
     website: string | null;
     place_id: string;
   } | null;
+  // For missing_cuisine flags only — populated by loadOpenFlags after the
+  // main query so the card can show the originating Reddit context.
+  sample_extraction?: SampleExtraction | null;
 };
 
 async function loadRestaurantsByCity(): Promise<Record<string, EditableRestaurant[]>> {
@@ -190,8 +219,30 @@ async function loadOpenFlags(): Promise<FlagWithContext[]> {
   if (error) {
     throw new Error(`Failed to load flags: ${error.message}`);
   }
-  // supabase-js can't reliably infer one-vs-many on nested embeds without
-  // generated types, so we assert the shape here. PostgREST returns single
-  // objects (not arrays) for many-to-one relationships like ours.
-  return (data ?? []) as unknown as FlagWithContext[];
+  const flags = (data ?? []) as unknown as FlagWithContext[];
+
+  // For missing_cuisine flags, fetch one sample extraction per restaurant so
+  // the admin sees the Reddit context behind the row. We do this as a
+  // follow-up query instead of folding it into the main embed because the
+  // missing_cuisine relationship runs flag → restaurant → extractions
+  // (one-to-many — supabase-js can't .limit(1) on a nested embed cleanly).
+  await Promise.all(
+    flags.map(async (f) => {
+      if (f.kind !== "missing_cuisine" || !f.restaurant?.id) return;
+      const { data: ext } = await supabase
+        .from("extractions")
+        .select(
+          "mention_text, quote_original, comment:reddit_comments(reddit_id, body, author, thread:reddit_threads(subreddit, title, url))",
+        )
+        .eq("restaurant_id", f.restaurant.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (ext) {
+        f.sample_extraction = ext as unknown as SampleExtraction;
+      }
+    }),
+  );
+
+  return flags;
 }

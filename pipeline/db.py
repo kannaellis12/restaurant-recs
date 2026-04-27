@@ -9,13 +9,52 @@ so the pipeline can be run repeatedly without producing duplicates.
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime
-from typing import Any, Optional
+from functools import wraps
+from typing import Any, Callable, Optional, TypeVar
 
+import httpx
 from supabase import Client, create_client
 
 from pipeline.config import settings
 from pipeline.models import Extraction, PlaceCandidate, ResolveResult
+
+
+# Transient errors we want to retry on. Supabase / PostgREST sit behind a
+# load balancer that occasionally drops idle HTTP/2 streams or rate-limits a
+# burst of writes during the discover stage. None of those are deterministic
+# bugs in our code — a brief backoff and retry resolves them.
+_RETRY_EXCEPTIONS: tuple = (
+    httpx.ReadTimeout,
+    httpx.ConnectTimeout,
+    httpx.WriteTimeout,
+    httpx.RemoteProtocolError,
+    httpx.ConnectError,
+    httpx.PoolTimeout,
+)
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def _with_retry(attempts: int = 3, base_backoff: float = 1.5) -> Callable[[F], F]:
+    """Decorator: retry on transient HTTP errors with exponential backoff."""
+
+    def deco(fn: F) -> F:
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            for i in range(attempts):
+                try:
+                    return fn(*args, **kwargs)
+                except _RETRY_EXCEPTIONS:
+                    if i == attempts - 1:
+                        raise
+                    time.sleep(base_backoff * (2 ** i))
+            raise RuntimeError("unreachable")
+
+        return wrapper  # type: ignore[return-value]
+
+    return deco
 
 
 _client: Optional[Client] = None
@@ -31,6 +70,7 @@ def get_client() -> Client:
 # --- reddit_threads ---------------------------------------------------------
 
 
+@_with_retry()
 def upsert_thread(
     *,
     reddit_id: str,
@@ -38,12 +78,13 @@ def upsert_thread(
     subreddit: str,
     title: str,
     posted_at: datetime,
+    body: Optional[str] = None,
     city_slug: Optional[str] = None,
     author: Optional[str] = None,
     relevance: Optional[float] = None,
     comment_count: int = 0,
 ) -> str:
-    """Upsert by reddit_id; returns the row's UUID."""
+    """Upsert by reddit_id; returns the row's UUID. Retries on transient HTTP errors."""
     client = get_client()
     result = (
         client.table("reddit_threads")
@@ -53,6 +94,7 @@ def upsert_thread(
                 "url": url,
                 "subreddit": subreddit,
                 "title": title,
+                "body": body,
                 "author": author,
                 "posted_at": posted_at.isoformat(),
                 "city_slug": city_slug,
@@ -69,6 +111,7 @@ def upsert_thread(
 # --- reddit_comments --------------------------------------------------------
 
 
+@_with_retry()
 def upsert_comment(
     *,
     reddit_id: str,
@@ -76,8 +119,9 @@ def upsert_comment(
     body: str,
     posted_at: datetime,
     author: Optional[str] = None,
+    parent_comment_id: Optional[str] = None,
 ) -> str:
-    """Upsert by reddit_id; returns the row's UUID."""
+    """Upsert by reddit_id; returns the row's UUID. Retries on transient HTTP errors."""
     client = get_client()
     result = (
         client.table("reddit_comments")
@@ -88,6 +132,7 @@ def upsert_comment(
                 "author": author,
                 "body": body,
                 "posted_at": posted_at.isoformat(),
+                "parent_comment_id": parent_comment_id,
             },
             on_conflict="reddit_id",
         )
@@ -208,7 +253,7 @@ def fetch_relevant_threads(city_slug: str, threshold: float) -> list[dict]:
     return (
         get_client()
         .table("reddit_threads")
-        .select("id, title, subreddit, relevance")
+        .select("id, title, body, subreddit, relevance")
         .eq("city_slug", city_slug)
         .gte("relevance", threshold)
         .execute()
@@ -218,15 +263,46 @@ def fetch_relevant_threads(city_slug: str, threshold: float) -> list[dict]:
 
 
 def fetch_comments_for_thread(thread_id: str) -> list[dict]:
+    """All comments for a thread, including parent_comment_id for chain walking."""
     return (
         get_client()
         .table("reddit_comments")
-        .select("id, body, author")
+        .select("id, reddit_id, body, author, parent_comment_id")
         .eq("thread_id", thread_id)
         .execute()
         .data
         or []
     )
+
+
+def walk_parent_chain(
+    comment_reddit_id: str,
+    comments_by_reddit_id: dict,
+    max_depth: int = 3,
+) -> list:
+    """Walk up the reply chain from a comment, in memory.
+
+    `comments_by_reddit_id` is a dict keyed by reddit_id (with t1_ prefix);
+    callers should index `fetch_comments_for_thread` results once per thread.
+
+    Returns parent comments closest-first: [immediate_parent, grandparent, ...]
+    Each entry is `{"author": str|None, "body": str}`.
+    """
+    chain: list = []
+    current_reddit_id = comment_reddit_id
+    for _ in range(max_depth):
+        current = comments_by_reddit_id.get(current_reddit_id)
+        if not current:
+            break
+        parent_id = current.get("parent_comment_id")
+        if not parent_id:
+            break
+        parent = comments_by_reddit_id.get(parent_id)
+        if not parent:
+            break
+        chain.append({"author": parent.get("author"), "body": parent.get("body") or ""})
+        current_reddit_id = parent_id
+    return chain
 
 
 def comment_has_extractions(comment_id: str) -> bool:

@@ -10,6 +10,7 @@ type Props = {
   hoveredId: string | null;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
+  hideService: boolean;
 };
 
 export function RestaurantList({
@@ -18,6 +19,7 @@ export function RestaurantList({
   hoveredId,
   onSelect,
   onHover,
+  hideService,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
@@ -74,11 +76,13 @@ export function RestaurantList({
                     </div>
                     <div className="flex gap-4 mt-2 text-xs">
                       <ScoreBadge label="Food" score={r.foodScore} count={r.foodUniqueUsers} />
-                      <ScoreBadge
-                        label="Service"
-                        score={r.serviceScore}
-                        count={r.serviceUniqueUsers}
-                      />
+                      {!hideService && (
+                        <ScoreBadge
+                          label="Service"
+                          score={r.serviceScore}
+                          count={r.serviceUniqueUsers}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

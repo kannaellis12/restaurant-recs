@@ -39,16 +39,20 @@ export type Filters = {
   cuisine: string | null;
   neighborhood: string | null;
   priceLevel: 1 | 2 | 3 | 4 | null;
-  /** When true, hide restaurants whose service score is below 0.7. Restaurants
-   * with no service data are kept (no complaints != negative). */
-  noServiceComplaints: boolean;
+  /**
+   * View toggle, not a row filter: when true the UI hides every service
+   * score badge and the "Sort by service" option. Doesn't change which
+   * restaurants are included. The premise of the site is "food first" so
+   * a one-click escape from the service column lets you focus on that.
+   */
+  hideService: boolean;
 };
 
 export const EMPTY_FILTERS: Filters = {
   cuisine: null,
   neighborhood: null,
   priceLevel: null,
-  noServiceComplaints: false,
+  hideService: false,
 };
 
 export function hasActiveFilters(f: Filters): boolean {
@@ -56,6 +60,6 @@ export function hasActiveFilters(f: Filters): boolean {
     f.cuisine !== null ||
     f.neighborhood !== null ||
     f.priceLevel !== null ||
-    f.noServiceComplaints
+    f.hideService
   );
 }

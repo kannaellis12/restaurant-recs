@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
+  markNotARestaurant,
   markRestaurantClosed,
   skipFlag,
   updateRestaurantWebsite,
@@ -85,7 +86,6 @@ export function MissingCuisineActions({
       <form
         action={markRestaurantClosed}
         onSubmit={(e) => {
-          // Confirm before closing — destructive (hides the restaurant from /[city]).
           if (!confirm("Mark this restaurant as permanently closed?")) {
             e.preventDefault();
           }
@@ -98,6 +98,28 @@ export function MissingCuisineActions({
           className="text-sm border border-gray-300 dark:border-gray-700 rounded px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-800 hover:text-red-700 dark:hover:text-red-400 transition-colors"
         >
           Mark permanently closed
+        </button>
+      </form>
+
+      <form
+        action={markNotARestaurant}
+        onSubmit={(e) => {
+          if (
+            !confirm(
+              "Mark this as not a restaurant? Closes the row AND nulls out its extractions so the bad signal stops counting.",
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <input type="hidden" name="flagId" value={flagId} />
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <button
+          type="submit"
+          className="text-sm border border-gray-300 dark:border-gray-700 rounded px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-800 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+        >
+          Not a restaurant
         </button>
       </form>
 

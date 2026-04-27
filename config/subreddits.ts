@@ -134,21 +134,16 @@ export const SUBREDDITS_BY_CITY: Record<string, SubredditSeed[]> = {
 /**
  * Global food / travel subs applied to ALL cities. Always require the city
  * keyword to appear in the thread title or body before relevance gating.
+ *
+ * Trimmed from 14 → 4 after the Denver deep run: each city's discover spends
+ * ~$1-2 per global sub on Apify, so 14 globals × 4 cities ≈ $60+ in globals
+ * alone. These four had the best signal-per-dollar ratio. Mirror of
+ * pipeline/subreddits.py::GLOBAL_SUBS.
  */
 export const GLOBAL_SUBREDDITS: SubredditSeed[] = general([
   "finedining",
-  "travel",
-  "restaurant",
-  "michelinstars",
-  "cuisine",
-  "restaurateur",
-  "restaurantowners",
-  "eatcheapandhealthy",
-  "breadit",
-  "kitchenconfidential",
-  "askfoodhistorians",
   "restaurants",
-  "food",
+  "michelinstars",
   "anthonybourdain",
 ]);
 

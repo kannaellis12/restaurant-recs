@@ -191,10 +191,9 @@ function MissingCuisineCard({
       ? (flag.details.restaurant_name as string)
       : "(unknown restaurant)";
 
-  // The page query selects flag.restaurant via FK, but the FK column itself
-  // (restaurant_id) isn't included. Flags with kind=missing_cuisine always
-  // have it — pull it from the embedded restaurant row's id.
   const restaurantId = (flag as { restaurant?: { id?: string } | null }).restaurant?.id;
+  const sample = flag.sample_extraction;
+  const sampleThread = sample?.comment?.thread ?? null;
 
   return (
     <article className="border border-gray-200 dark:border-gray-800 rounded-lg p-5">
@@ -224,6 +223,44 @@ function MissingCuisineCard({
           </a>
         )}
       </div>
+
+      {sample && (
+        <div className="mb-4 border-t border-gray-200 dark:border-gray-800 pt-3">
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            Mentioned in
+          </div>
+          {sampleThread && (
+            <div className="text-xs text-gray-500 mb-1">
+              <span className="text-gray-700 dark:text-gray-300">
+                r/{sampleThread.subreddit}
+              </span>
+              {" · "}
+              <a
+                href={sampleThread.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {sampleThread.title}
+              </a>
+            </div>
+          )}
+          <blockquote className="border-l-2 border-gray-300 dark:border-gray-700 pl-3 italic text-sm text-gray-700 dark:text-gray-300">
+            “{sample.quote_original}”
+          </blockquote>
+          {sample.comment?.author && sampleThread?.url && sample.comment.reddit_id && (
+            <a
+              href={`${sampleThread.url.replace(/\/$/, "")}/${sample.comment.reddit_id.replace(/^t1_/, "")}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-gray-500 mt-1 inline-block hover:underline"
+              title="Direct link to the specific comment"
+            >
+              — u/{sample.comment.author} →
+            </a>
+          )}
+        </div>
+      )}
 
       <CuisineAssignment flagId={flag.id} />
 

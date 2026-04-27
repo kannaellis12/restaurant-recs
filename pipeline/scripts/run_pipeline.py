@@ -32,6 +32,12 @@ from pipeline.stages.resolve import (
     resolve_mention,
 )
 from pipeline.stages.score import compute_scores_for_city
+from pipeline.subreddits import (
+    CITY_KEYWORDS,
+    GLOBAL_SUBS,
+    SUBREDDITS_BY_CITY,
+    SubredditSeed,
+)
 
 
 def main() -> int:
@@ -58,14 +64,14 @@ def main() -> int:
         help="Skip the Apify discovery step. Useful for resuming a run after "
         "threads have already been ingested.",
     )
+    parser.add_argument(
+        "--include-globals",
+        action="store_true",
+        help="Also pull threads from GLOBAL_SUBS (r/finedining, r/food, etc.) "
+        "with city keyword pre-filtering. Implied when --subreddits is not "
+        "specified and --skip-discover is not set.",
+    )
     args = parser.parse_args()
-
-    if not args.skip_discover and not args.subreddits:
-        print(
-            "Error: --subreddits is required unless --skip-discover is passed.",
-            file=sys.stderr,
-        )
-        return 1
 
     if args.city not in CITIES:
         print(f"Unknown city slug: {args.city!r}. Known: {list(CITIES)}", file=sys.stderr)
@@ -81,29 +87,58 @@ def main() -> int:
             "  [dim]Processing existing threads in the DB only.[/dim]"
         )
     else:
-        console.rule(
-            f"[bold]1. Discover[/bold] — {len(args.subreddits)} subreddits"
-        )
+        # Build the seed list. If the user passed --subreddits explicitly,
+        # honor it (treated as city-focused, no keyword filter). Otherwise
+        # pull from pipeline.subreddits config — city subs always; globals
+        # too unless the user wants to skip them by passing --subreddits.
+        seeds: list[SubredditSeed] = []
+        if args.subreddits:
+            seeds.extend(
+                SubredditSeed(name=n, requires_city_keyword=False)
+                for n in args.subreddits
+            )
+        else:
+            seeds.extend(SUBREDDITS_BY_CITY.get(args.city, []))
+            if args.include_globals or not args.subreddits:
+                seeds.extend(GLOBAL_SUBS)
+
+        keywords = CITY_KEYWORDS.get(args.city, [args.city.replace("-", " ")])
+
+        console.rule(f"[bold]1. Discover[/bold] — {len(seeds)} subreddits")
         discover_table = Table(show_lines=False)
         discover_table.add_column("Subreddit", style="cyan")
         discover_table.add_column("Threads", justify="right")
         discover_table.add_column("Comments", justify="right")
         discover_table.add_column("Old skipped", justify="right", style="dim")
-        for sub in args.subreddits:
-            console.print(f"  Pulling r/{sub} ...")
-            result = discover_subreddit(
-                sub,
-                city_slug=args.city,
-                max_posts=args.max_posts,
-                max_comments_per_post=args.max_comments,
-            )
-            discover_table.add_row(
-                f"r/{sub}",
-                str(result["threads"]),
-                str(result["comments"]),
-                str(result["skipped_old"]),
-            )
+        discover_table.add_column("KW skipped", justify="right", style="dim")
+        for seed in seeds:
+            kw_filter = keywords if seed.requires_city_keyword else None
+            label = f"r/{seed.name}"
+            if seed.requires_city_keyword:
+                label += " *"
+            console.print(f"  Pulling {label} ...")
+            try:
+                result = discover_subreddit(
+                    seed.name,
+                    city_slug=args.city,
+                    max_posts=args.max_posts,
+                    max_comments_per_post=args.max_comments,
+                    requires_city_keyword=kw_filter,
+                )
+                discover_table.add_row(
+                    label,
+                    str(result["threads"]),
+                    str(result["comments"]),
+                    str(result["skipped_old"]),
+                    str(result.get("skipped_keyword", 0)),
+                )
+            except Exception as e:
+                # One sub failing (Apify timeout, dead actor run, etc.)
+                # shouldn't kill the whole pipeline — log and move on.
+                console.print(f"  [red]✗[/red] {label} failed: {type(e).__name__}: {e}")
+                discover_table.add_row(label, "[red]err[/red]", "—", "—", "—")
         console.print(discover_table)
+        console.print("[dim]* requires city keyword in title/body[/dim]")
 
     # ------------------------------------------------------------------
     console.rule("[bold]2. Relevance gate[/bold]")
@@ -133,10 +168,20 @@ def main() -> int:
 
     for t in relevant:
         comments = db.fetch_comments_for_thread(t["id"])
+        # Index once per thread for in-memory parent-chain walking.
+        comments_by_reddit_id = {c["reddit_id"]: c for c in comments}
         for c in comments:
             if db.comment_has_extractions(c["id"]):
                 continue  # already processed in a prior run
-            extractions = extract_from_comment(c["body"])
+            parent_chain = db.walk_parent_chain(
+                c["reddit_id"], comments_by_reddit_id, max_depth=3
+            )
+            extractions = extract_from_comment(
+                c["body"],
+                thread_title=t["title"],
+                thread_body=t.get("body"),
+                parent_chain=parent_chain or None,
+            )
             for e in extractions:
                 r = resolve_mention(e.mention, args.city, e.neighborhood_hint)
                 db.insert_place_resolution(

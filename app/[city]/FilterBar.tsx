@@ -22,6 +22,8 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "volume", label: "Most reviewed" },
 ];
 
+const SORT_OPTIONS_HIDE_SERVICE = SORT_OPTIONS.filter((o) => o.value !== "service");
+
 const PRICE_OPTIONS: { value: 1 | 2 | 3 | 4; label: string }[] = [
   { value: 1, label: "$" },
   { value: 2, label: "$$" },
@@ -41,6 +43,7 @@ export function FilterBar({
   onClearFilters,
 }: Props) {
   const active = hasActiveFilters(filters);
+  const sortOptions = filters.hideService ? SORT_OPTIONS_HIDE_SERVICE : SORT_OPTIONS;
 
   return (
     <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-2 flex gap-3 items-center flex-wrap text-sm">
@@ -50,7 +53,7 @@ export function FilterBar({
           onChange={(e) => onSortKeyChange(e.target.value as SortKey)}
           className={selectClasses}
         >
-          {SORT_OPTIONS.map((o) => (
+          {sortOptions.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -118,13 +121,13 @@ export function FilterBar({
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
-          checked={filters.noServiceComplaints}
+          checked={filters.hideService}
           onChange={(e) =>
-            onFiltersChange({ ...filters, noServiceComplaints: e.target.checked })
+            onFiltersChange({ ...filters, hideService: e.target.checked })
           }
           className="cursor-pointer"
         />
-        <span className="text-gray-700 dark:text-gray-300">No service complaints</span>
+        <span className="text-gray-700 dark:text-gray-300">Hide service reviews</span>
       </label>
 
       {active && (

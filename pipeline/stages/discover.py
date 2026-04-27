@@ -122,6 +122,7 @@ def discover_subreddit(
             url=post.get("url") or f"https://www.reddit.com/r/{subreddit}/comments/{post_id}",
             subreddit=subreddit,
             title=title,
+            body=body or None,
             author=post.get("username") or post.get("author"),
             posted_at=posted_at,
             city_slug=city_slug,
@@ -140,12 +141,26 @@ def discover_subreddit(
                 _parse_date(c.get("createdAt") or c.get("created_utc") or c.get("created"))
                 or posted_at
             )
+
+            # Reddit's parent_id is a fullname like 't1_xxx' (parent comment)
+            # or 't3_xxx' (the post itself, for top-level comments). We only
+            # care about t1_ — top-level comments have null parent_comment_id.
+            parent_raw = (
+                c.get("parentId")
+                or c.get("parent_id")
+                or c.get("parentID")
+            )
+            parent_comment_id = (
+                parent_raw if parent_raw and parent_raw.startswith("t1_") else None
+            )
+
             db.upsert_comment(
                 reddit_id=cid,
                 thread_id=thread_uuid,
                 body=cbody,
                 author=c.get("username") or c.get("author"),
                 posted_at=cposted,
+                parent_comment_id=parent_comment_id,
             )
             n_comments += 1
 

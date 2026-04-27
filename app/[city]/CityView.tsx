@@ -43,11 +43,8 @@ export function CityView({ city, restaurants }: Props) {
     if (filters.priceLevel) {
       r = r.filter((x) => x.priceLevel === filters.priceLevel);
     }
-    if (filters.noServiceComplaints) {
-      // Keep restaurants without service data (no complaints) and those
-      // whose service score is at least 0.7.
-      r = r.filter((x) => x.serviceScore === null || x.serviceScore >= 0.7);
-    }
+    // Note: filters.hideService is a UI toggle, not a data filter — it hides
+    // service score badges in RestaurantList instead of removing rows.
     return [...r].sort(comparator(sortKey));
   }, [restaurants, filters, sortKey]);
 
@@ -90,6 +87,7 @@ export function CityView({ city, restaurants }: Props) {
           hoveredId={hoveredId}
           onSelect={setSelectedId}
           onHover={setHoveredId}
+          hideService={filters.hideService}
         />
         <CityMap
           city={city}
