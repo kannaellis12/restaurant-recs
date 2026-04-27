@@ -75,12 +75,12 @@ export const SUBREDDITS_BY_CITY: Record<string, SubredditSeed[]> = {
   ],
 
   // ----------------------------------------------------------- NEW ORLEANS
+  // Removed: NewOrleansLocals (dead — last post 4+ years ago)
   "new-orleans": [
     ...cityFocused([
       "NewOrleans",
       "NOLA",
       "AskNOLA",
-      "NewOrleansLocals",
       "NewOrleansFood",
       // Neighborhoods / quarters with their own subs
       "frenchquarter",
@@ -93,22 +93,27 @@ export const SUBREDDITS_BY_CITY: Record<string, SubredditSeed[]> = {
   ],
 
   // ---------------------------------------------------------------- PARIS
-  paris: cityFocused([
-    "paris", // primary, French-language
-    "AskParis",
-    "expatsinfrance",
-    "paristravel", // English-speaking tourists
-    "ParisTravelGuide",
-    "restoparis", // restaurants specifically
-    "frenchfood",
-    // Removed: theparisianguide / parisfoodguide / socialparis (small/uncertain)
-  ]),
+  // Removed: expatsinfrance (NO_POSTS), theparisianguide / parisfoodguide /
+  // socialparis (small/uncertain).
+  // Added: r/France with keyword filter for Paris-related content.
+  paris: [
+    ...cityFocused([
+      "paris", // primary, French-language
+      "AskParis",
+      "paristravel", // English-speaking tourists
+      "ParisTravelGuide",
+      "restoparis", // restaurants specifically
+      "frenchfood",
+    ]),
+    ...general(["France"]),
+  ],
 
   // -------------------------------------------------------------- CALGARY
+  // Removed: calgaryfood (NO_POSTS), chestermere (sub doesn't exist),
+  // norulescalgary (off-topic chaos), ottowagood (likely typo).
   calgary: [
     ...cityFocused([
       "calgary",
-      "calgaryfood",
       "foodcalgary",
       "YYC",
       "bettercalgary",
@@ -117,11 +122,9 @@ export const SUBREDDITS_BY_CITY: Record<string, SubredditSeed[]> = {
       "airdrie",
       "cochrane",
       "okotoks",
-      "chestermere",
       // Mountain / weekend destinations Calgarians eat at
       "Banff",
       "canmore",
-      // Removed: norulescalgary (off-topic chaos), ottowagood (likely typo)
     ]),
     ...general([
       "alberta",

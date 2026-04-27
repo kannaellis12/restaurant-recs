@@ -63,13 +63,24 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
     if (data) extractions.push(...(data as unknown as ExtractionRow[]));
   }
 
-  // 3. Aggregate per restaurant
+  // 3. Aggregate per restaurant. We keep the unique-user Sets in a parallel
+  //    map so they never leak into the upsert payload — PostgREST would
+  //    reject unknown columns ("Could not find the '_foodUsers' column…").
   const byRestaurant = new Map<string, Aggregate>();
+  const usersByRestaurant = new Map<string, UserTracking>();
   for (const row of extractions) {
     if (!row.restaurant_id) continue;
-    const agg = byRestaurant.get(row.restaurant_id) ?? newAggregate();
-    accumulate(agg, row);
-    byRestaurant.set(row.restaurant_id, agg);
+    let agg = byRestaurant.get(row.restaurant_id);
+    let users = usersByRestaurant.get(row.restaurant_id);
+    if (!agg) {
+      agg = newAggregate();
+      byRestaurant.set(row.restaurant_id, agg);
+    }
+    if (!users) {
+      users = { food: new Set<string>(), service: new Set<string>() };
+      usersByRestaurant.set(row.restaurant_id, users);
+    }
+    accumulate(agg, users, row);
   }
 
   // Finalize: compute scores from the running totals, drop zero-volume rows.
@@ -109,7 +120,12 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
 
 // ---------- internals -------------------------------------------------------
 
-function newAggregate(): Aggregate & { _foodUsers: Set<string>; _serviceUsers: Set<string> } {
+type UserTracking = {
+  food: Set<string>;
+  service: Set<string>;
+};
+
+function newAggregate(): Aggregate {
   return {
     food_score: null,
     food_positive: 0,
@@ -120,47 +136,41 @@ function newAggregate(): Aggregate & { _foodUsers: Set<string>; _serviceUsers: S
     service_negative: 0,
     service_unique_users: 0,
     total_unique_users: 0,
-    _foodUsers: new Set<string>(),
-    _serviceUsers: new Set<string>(),
   };
 }
 
-function accumulate(agg: Aggregate, row: ExtractionRow) {
-  // The aggregate carries hidden _foodUsers / _serviceUsers Sets so we can
-  // count distinct comment_ids per aspect across rows. The Sets aren't part
-  // of the Aggregate type seen by callers — they're internal scratch.
-  const a = agg as Aggregate & { _foodUsers: Set<string>; _serviceUsers: Set<string> };
+function accumulate(agg: Aggregate, users: UserTracking, row: ExtractionRow) {
   const w = Number(row.vote_weight) || 1.0;
 
   if (row.food_sentiment !== null) {
-    a._foodUsers.add(row.comment_id);
-    if (row.food_sentiment === "positive") a.food_positive += w;
-    else if (row.food_sentiment === "negative") a.food_negative += w;
+    users.food.add(row.comment_id);
+    if (row.food_sentiment === "positive") agg.food_positive += w;
+    else if (row.food_sentiment === "negative") agg.food_negative += w;
     else if (row.food_sentiment === "mixed") {
-      a.food_positive += w * 0.5;
-      a.food_negative += w * 0.5;
+      agg.food_positive += w * 0.5;
+      agg.food_negative += w * 0.5;
     }
   }
   if (row.service_sentiment !== null) {
-    a._serviceUsers.add(row.comment_id);
-    if (row.service_sentiment === "positive") a.service_positive += w;
-    else if (row.service_sentiment === "negative") a.service_negative += w;
+    users.service.add(row.comment_id);
+    if (row.service_sentiment === "positive") agg.service_positive += w;
+    else if (row.service_sentiment === "negative") agg.service_negative += w;
     else if (row.service_sentiment === "mixed") {
-      a.service_positive += w * 0.5;
-      a.service_negative += w * 0.5;
+      agg.service_positive += w * 0.5;
+      agg.service_negative += w * 0.5;
     }
   }
 
-  // Maintain derived counts in lock-step.
-  a.food_unique_users = a._foodUsers.size;
-  a.service_unique_users = a._serviceUsers.size;
-  a.total_unique_users = new Set([...a._foodUsers, ...a._serviceUsers]).size;
+  // Derived counts in lock-step.
+  agg.food_unique_users = users.food.size;
+  agg.service_unique_users = users.service.size;
+  agg.total_unique_users = new Set([...users.food, ...users.service]).size;
 
-  // Keep numerics in our canonical 3-decimal precision (matches Python).
-  a.food_positive = round3(a.food_positive);
-  a.food_negative = round3(a.food_negative);
-  a.service_positive = round3(a.service_positive);
-  a.service_negative = round3(a.service_negative);
+  // Canonical 3-decimal precision (matches Python).
+  agg.food_positive = round3(agg.food_positive);
+  agg.food_negative = round3(agg.food_negative);
+  agg.service_positive = round3(agg.service_positive);
+  agg.service_negative = round3(agg.service_negative);
 }
 
 function aspectScore(positive: number, negative: number): number | null {

@@ -51,26 +51,33 @@ SUBREDDITS_BY_CITY: dict[str, list[SubredditSeed]] = {
     ],
 
     # ----- NEW ORLEANS -----------------------------------------------------
+    # Removed: NewOrleansLocals (dead — last post 4+ years ago)
     "new-orleans": [
         *_focused([
-            "NewOrleans", "NOLA", "AskNOLA", "NewOrleansLocals",
-            "NewOrleansFood", "frenchquarter", "metairie", "kenner", "Slidell",
+            "NewOrleans", "NOLA", "AskNOLA", "NewOrleansFood",
+            "frenchquarter", "metairie", "kenner", "Slidell",
         ]),
         *_general(["Louisiana"]),
     ],
 
     # ----- PARIS -----------------------------------------------------------
-    "paris": _focused([
-        "paris", "AskParis", "expatsinfrance", "paristravel",
-        "ParisTravelGuide", "restoparis", "frenchfood",
-    ]),
+    # Removed: expatsinfrance (NO_POSTS).
+    # Added: r/France (huge general sub, keyword-filtered for Paris content).
+    "paris": [
+        *_focused([
+            "paris", "AskParis", "paristravel", "ParisTravelGuide",
+            "restoparis", "frenchfood",
+        ]),
+        *_general(["France"]),
+    ],
 
     # ----- CALGARY ---------------------------------------------------------
+    # Removed: calgaryfood (NO_POSTS), chestermere (sub doesn't exist).
     "calgary": [
         *_focused([
-            "calgary", "calgaryfood", "foodcalgary", "YYC", "bettercalgary",
+            "calgary", "foodcalgary", "YYC", "bettercalgary",
             "calgarysocialclub", "airdrie", "cochrane", "okotoks",
-            "chestermere", "Banff", "canmore",
+            "Banff", "canmore",
         ]),
         *_general(["alberta", "canada", "edmonton"]),
     ],

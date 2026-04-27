@@ -269,6 +269,7 @@ function MissingCuisineCard({
           <MissingCuisineActions
             flagId={flag.id}
             restaurantId={restaurantId}
+            currentName={rest?.name ?? fallbackName}
             currentWebsite={rest?.website ?? null}
           />
         </div>

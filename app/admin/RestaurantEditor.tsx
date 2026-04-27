@@ -74,6 +74,7 @@ function RestaurantEditForm({
   r: EditableRestaurant;
   onClose: () => void;
 }) {
+  const [name, setName] = useState(r.name);
   const [neighborhood, setNeighborhood] = useState(r.neighborhood ?? "");
   const [cuisines, setCuisines] = useState<string[]>(r.cuisines);
   const [priceLevel, setPriceLevel] = useState<number | null>(r.price_level);
@@ -93,6 +94,7 @@ function RestaurantEditForm({
     startTransition(async () => {
       const fd = new FormData();
       fd.append("restaurantId", r.id);
+      fd.append("name", name);
       fd.append("neighborhood", neighborhood);
       for (const c of cuisines) fd.append("cuisines", c);
       if (priceLevel !== null) fd.append("priceLevel", String(priceLevel));
@@ -131,6 +133,19 @@ function RestaurantEditForm({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <label className="flex flex-col gap-1 md:col-span-2">
+          <span className="text-xs uppercase tracking-wide text-gray-500">
+            Name
+          </span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Restaurant name"
+            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded px-2 py-1.5"
+          />
+        </label>
+
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-gray-500">
             Neighborhood

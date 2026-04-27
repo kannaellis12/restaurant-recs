@@ -289,13 +289,15 @@ export async function markRestaurantClosed(formData: FormData): Promise<void> {
 
 /**
  * General-purpose restaurant editor used by the "All restaurants" admin
- * section. Updates neighborhood, cuisines, price level, and website in one
- * call. Form always submits all four fields with current values pre-filled,
- * so we just write whatever came in.
+ * section. Updates name, neighborhood, cuisines, price level, and website
+ * in one call. Form always submits all fields with current values pre-
+ * filled, so we just write whatever came in.
  */
 export async function updateRestaurant(formData: FormData): Promise<void> {
   const restaurantId = String(formData.get("restaurantId") ?? "");
   if (!restaurantId) return;
+
+  const name = String(formData.get("name") ?? "").trim();
 
   const neighborhood =
     String(formData.get("neighborhood") ?? "").trim() || null;
@@ -318,40 +320,64 @@ export async function updateRestaurant(formData: FormData): Promise<void> {
       : `https://${websiteRaw}`
     : null;
 
+  const updates: Record<string, unknown> = {
+    neighborhood,
+    cuisines,
+    price_level: priceLevel,
+    website,
+  };
+  // Name: only update if non-empty (don't allow clearing). Restaurants
+  // must always have a name.
+  if (name) {
+    updates.name = name;
+  }
+
   await adminClient()
     .from("restaurants")
-    .update({
-      neighborhood,
-      cuisines,
-      price_level: priceLevel,
-      website,
-    })
+    .update(updates)
     .eq("id", restaurantId);
 
   revalidatePath("/admin");
 }
 
 /**
- * Update a restaurant's website without making any other changes. Doesn't
- * touch the flag — the admin can still assign cuisine / mark closed / skip
- * after correcting the URL.
+ * Update a restaurant's name and/or website without making any other
+ * changes. Used by the missing-cuisine flag card so admins can correct
+ * Google's "Le Comptoir Cafe" → the actual "Le Comptoir du Relais" they
+ * see in the source comment, plus fix wrong websites. Doesn't touch the
+ * flag itself — admin can still assign cuisine / mark closed / skip after.
+ *
+ * Both fields are optional: empty/missing fields are left untouched.
  */
-export async function updateRestaurantWebsite(
+export async function updateRestaurantDetails(
   formData: FormData,
 ): Promise<void> {
   const restaurantId = String(formData.get("restaurantId") ?? "");
-  const rawWebsite = String(formData.get("website") ?? "").trim();
   if (!restaurantId) return;
 
-  // Empty string clears the website; otherwise prepend https:// if missing.
-  let website: string | null = null;
-  if (rawWebsite) {
-    website = /^https?:\/\//i.test(rawWebsite) ? rawWebsite : `https://${rawWebsite}`;
+  const rawName = String(formData.get("name") ?? "").trim();
+  const rawWebsite = String(formData.get("website") ?? "").trim();
+
+  const updates: Record<string, string | null> = {};
+  if (rawName) {
+    updates.name = rawName;
   }
+  // Empty website clears; otherwise prepend https:// if missing scheme.
+  if (formData.has("website")) {
+    if (!rawWebsite) {
+      updates.website = null;
+    } else {
+      updates.website = /^https?:\/\//i.test(rawWebsite)
+        ? rawWebsite
+        : `https://${rawWebsite}`;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) return;
 
   await adminClient()
     .from("restaurants")
-    .update({ website })
+    .update(updates)
     .eq("id", restaurantId);
 
   revalidatePath("/admin");
