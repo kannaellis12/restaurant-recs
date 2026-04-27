@@ -39,9 +39,10 @@ def main() -> int:
     parser.add_argument("--city", required=True, help="City slug (e.g. denver).")
     parser.add_argument(
         "--subreddits",
-        nargs="+",
-        required=True,
-        help="Subreddit names without r/ (e.g. Denver DenverFood AskDenver).",
+        nargs="*",
+        default=[],
+        help="Subreddit names without r/ (e.g. Denver DenverFood AskDenver). "
+        "Required unless --skip-discover is passed.",
     )
     parser.add_argument("--max-posts", type=int, default=20)
     parser.add_argument("--max-comments", type=int, default=30)
@@ -51,7 +52,20 @@ def main() -> int:
         default=0.5,
         help="Threads must score at or above this to be extracted.",
     )
+    parser.add_argument(
+        "--skip-discover",
+        action="store_true",
+        help="Skip the Apify discovery step. Useful for resuming a run after "
+        "threads have already been ingested.",
+    )
     args = parser.parse_args()
+
+    if not args.skip_discover and not args.subreddits:
+        print(
+            "Error: --subreddits is required unless --skip-discover is passed.",
+            file=sys.stderr,
+        )
+        return 1
 
     if args.city not in CITIES:
         print(f"Unknown city slug: {args.city!r}. Known: {list(CITIES)}", file=sys.stderr)
@@ -61,27 +75,35 @@ def main() -> int:
     console = Console()
 
     # ------------------------------------------------------------------
-    console.rule(f"[bold]1. Discover[/bold] — {len(args.subreddits)} subreddits")
-    discover_table = Table(show_lines=False)
-    discover_table.add_column("Subreddit", style="cyan")
-    discover_table.add_column("Threads", justify="right")
-    discover_table.add_column("Comments", justify="right")
-    discover_table.add_column("Old skipped", justify="right", style="dim")
-    for sub in args.subreddits:
-        console.print(f"  Pulling r/{sub} ...")
-        result = discover_subreddit(
-            sub,
-            city_slug=args.city,
-            max_posts=args.max_posts,
-            max_comments_per_post=args.max_comments,
+    if args.skip_discover:
+        console.rule("[bold]1. Discover[/bold] — [dim]skipped[/dim]")
+        console.print(
+            "  [dim]Processing existing threads in the DB only.[/dim]"
         )
-        discover_table.add_row(
-            f"r/{sub}",
-            str(result["threads"]),
-            str(result["comments"]),
-            str(result["skipped_old"]),
+    else:
+        console.rule(
+            f"[bold]1. Discover[/bold] — {len(args.subreddits)} subreddits"
         )
-    console.print(discover_table)
+        discover_table = Table(show_lines=False)
+        discover_table.add_column("Subreddit", style="cyan")
+        discover_table.add_column("Threads", justify="right")
+        discover_table.add_column("Comments", justify="right")
+        discover_table.add_column("Old skipped", justify="right", style="dim")
+        for sub in args.subreddits:
+            console.print(f"  Pulling r/{sub} ...")
+            result = discover_subreddit(
+                sub,
+                city_slug=args.city,
+                max_posts=args.max_posts,
+                max_comments_per_post=args.max_comments,
+            )
+            discover_table.add_row(
+                f"r/{sub}",
+                str(result["threads"]),
+                str(result["comments"]),
+                str(result["skipped_old"]),
+            )
+        console.print(discover_table)
 
     # ------------------------------------------------------------------
     console.rule("[bold]2. Relevance gate[/bold]")
