@@ -36,7 +36,9 @@ export function CityMap({ city, restaurants, selectedId, hoveredId, onSelect }: 
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      // Editorial paper-on-ink style from the design handoff. Hides default
+      // food POIs so our pins are the only food markers on the map.
+      style: "/mapbox-style.json",
       center: city.center,
       zoom: city.zoom,
     });
