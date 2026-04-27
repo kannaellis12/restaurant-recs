@@ -131,6 +131,16 @@ await test("Supabase service role", async () => {
   return `reachable (HTTP ${r.status})`;
 });
 
+await test("Apify API token", async () => {
+  const tok = need("APIFY_API_TOKEN");
+  const r = await fetch("https://api.apify.com/v2/users/me", {
+    headers: { Authorization: `Bearer ${tok}` },
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const d = await r.json();
+  return `username=${d?.data?.username ?? "?"}, plan=${d?.data?.plan ?? "?"}`;
+});
+
 await test("Migration applied (cities)", async () => {
   const url = need("NEXT_PUBLIC_SUPABASE_URL");
   const svc = need("SUPABASE_SERVICE_ROLE_KEY");

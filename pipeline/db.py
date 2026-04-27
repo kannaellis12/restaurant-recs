@@ -180,6 +180,68 @@ def delete_extractions_for_comments(comment_ids: list[str]) -> None:
     get_client().table("extractions").delete().in_("comment_id", comment_ids).execute()
 
 
+# --- read helpers (used by orchestrator) ------------------------------------
+
+
+def fetch_threads_needing_relevance(city_slug: str) -> list[dict]:
+    """Threads in the city that haven't been relevance-scored yet."""
+    return (
+        get_client()
+        .table("reddit_threads")
+        .select("id, title, subreddit")
+        .eq("city_slug", city_slug)
+        .is_("relevance", "null")
+        .execute()
+        .data
+        or []
+    )
+
+
+def update_thread_relevance(thread_id: str, relevance: float) -> None:
+    get_client().table("reddit_threads").update({"relevance": relevance}).eq(
+        "id", thread_id
+    ).execute()
+
+
+def fetch_relevant_threads(city_slug: str, threshold: float) -> list[dict]:
+    """Threads whose relevance is at or above threshold."""
+    return (
+        get_client()
+        .table("reddit_threads")
+        .select("id, title, subreddit, relevance")
+        .eq("city_slug", city_slug)
+        .gte("relevance", threshold)
+        .execute()
+        .data
+        or []
+    )
+
+
+def fetch_comments_for_thread(thread_id: str) -> list[dict]:
+    return (
+        get_client()
+        .table("reddit_comments")
+        .select("id, body, author")
+        .eq("thread_id", thread_id)
+        .execute()
+        .data
+        or []
+    )
+
+
+def comment_has_extractions(comment_id: str) -> bool:
+    """True if any extraction already references this comment."""
+    r = (
+        get_client()
+        .table("extractions")
+        .select("id", count="exact")
+        .eq("comment_id", comment_id)
+        .limit(1)
+        .execute()
+    )
+    return (r.count or 0) > 0
+
+
 # --- place_resolutions ------------------------------------------------------
 
 

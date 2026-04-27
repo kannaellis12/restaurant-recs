@@ -47,7 +47,14 @@ comment (e.g. "the pasta is great but the meat dishes are dry"). Don't use \
 mixed just because food and service differ.
   - If the comment discusses ONLY food, OMIT service_sentiment. If it discusses \
 ONLY service, OMIT food_sentiment. Never invent.
-  - Use the exact wording the commenter used for the mention.
+  - Use the exact wording the commenter used for the mention — but the mention \
+must be a RESTAURANT NAME (or unambiguous descriptor like "the Thai place on \
+Colfax"). Do NOT extract:
+      * Person names ("Carmen", "the owner") — those are people, not establishments.
+      * Single-word abbreviations or filler ("Def", "FYI", "TBH", "IMO").
+      * Generic categories ("the diner", "a sushi spot") with no identifying detail.
+      * Job titles ("the chef", "the waitress").
+      * Comma-separated combinations of mention + a person ("the owner, X").
   - If the comment is not about restaurants at all (politics, traffic, weather), \
 record an empty list.
 

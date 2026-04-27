@@ -2,13 +2,16 @@
  * Subreddit seed lists for the discovery step of the pipeline.
  *
  * Two tiers:
- *  - per-city subs (focused — assume threads are about that city)
+ *  - per-city subs (focused — assume threads are about that city or its metro)
  *  - global food/travel subs (very large/general — keyword-filter for
  *    the city name BEFORE the LLM relevance gate to control LLM spend)
  *
- * The pipeline auto-discovers additional subs (via Reddit search for
- * "[city] food" type queries) and merges them in. Dead/private subs are
- * logged and skipped silently.
+ * The pipeline auto-discovers nothing yet; subs we list here are the only
+ * input. Dead/private subs return 0 threads and are silently skipped — costs
+ * one wasted Apify request, no harm done. After each run, prune any sub that
+ * consistently returns 0.
+ *
+ * Last manual pass: 2026-04-26. Notes inline.
  */
 
 export type SubredditSeed = {
@@ -29,64 +32,101 @@ const general = (names: string[]): SubredditSeed[] =>
   names.map((name) => ({ name, requiresCityKeyword: true }));
 
 export const SUBREDDITS_BY_CITY: Record<string, SubredditSeed[]> = {
+  // ---------------------------------------------------------------- DENVER
+  // Includes the Denver metro AND Boulder area, since Boulder restaurants
+  // (Frasca, Pizzeria Locale's flagship, etc.) routinely get recommended in
+  // Denver food discussions and our 50km Places search radius reaches there.
   denver: [
     ...cityFocused([
+      // Core Denver
       "Denver",
       "DenverFood",
-      "AskDenver",
       "denverwomen",
       "DenverMeetups",
       "DenverCirclejerk",
       "DenverSecrets",
       "DenverBourbonHunt",
       "DenverAfterDark",
-      "DenverGamers",
+      "DenverFoodieFriends",
       "MovingtoDenver",
       "DowntownDenver",
-      "DenverSmallBusiness",
-      "DenverFoodieFriends",
+      // Suburbs
       "WestminsterCO",
-      "Denvermusic",
+      "arvadaco",
+      "auroraco",
+      "lakewoodCO",
+      "littletonCO",
+      "centennial",
+      "highlandsranch",
+      "parkercolorado",
+      "ENGLEWOODCO",
+      "castlerock",
+      // Boulder area (tightly connected to Denver food scene)
+      "boulder",
+      "BoulderColorado",
+      // Other Front Range cities frequently mentioned alongside Denver
+      "longmontcolorado",
+      "FortCollins",
+      "ColoradoSprings",
+      // Removed: AskDenver (dormant since 2021), Denvermusic (off-topic for food),
+      //          DenverGamers (off-topic), DenverSmallBusiness (promotional)
     ]),
     ...general(["Colorado"]),
   ],
 
-  "new-orleans": cityFocused([
-    "NewOrleans",
-    "NOLA",
-    "AskNOLA",
-    "NewOrleansLocals",
-    "NewOrleansFood",
-  ]),
+  // ----------------------------------------------------------- NEW ORLEANS
+  "new-orleans": [
+    ...cityFocused([
+      "NewOrleans",
+      "NOLA",
+      "AskNOLA",
+      "NewOrleansLocals",
+      "NewOrleansFood",
+      // Neighborhoods / quarters with their own subs
+      "frenchquarter",
+      // Suburbs / metro
+      "metairie",
+      "kenner",
+      "Slidell",
+    ]),
+    ...general(["Louisiana"]),
+  ],
 
+  // ---------------------------------------------------------------- PARIS
   paris: cityFocused([
-    "paris",
-    "paristravel",
-    "paristravelguide",
-    "theparisianguide",
-    "restoparis",
-    "socialparis",
-    "askparis",
+    "paris", // primary, French-language
+    "AskParis",
     "expatsinfrance",
-    "parisfood",
-    "parisfoodguide",
+    "paristravel", // English-speaking tourists
+    "ParisTravelGuide",
+    "restoparis", // restaurants specifically
+    "frenchfood",
+    // Removed: theparisianguide / parisfoodguide / socialparis (small/uncertain)
   ]),
 
+  // -------------------------------------------------------------- CALGARY
   calgary: [
     ...cityFocused([
       "calgary",
       "calgaryfood",
       "foodcalgary",
-      "calgarysocialclub",
-      "norulescalgary",
-      "ottowagood",
-      "bettercalgary",
       "YYC",
+      "bettercalgary",
+      "calgarysocialclub",
+      // Suburbs / nearby
+      "airdrie",
+      "cochrane",
+      "okotoks",
+      "chestermere",
+      // Mountain / weekend destinations Calgarians eat at
+      "Banff",
+      "canmore",
+      // Removed: norulescalgary (off-topic chaos), ottowagood (likely typo)
     ]),
     ...general([
-      "canadian",
+      "alberta",
+      "canada",
       "edmonton",
-      "canadianidiots",
     ]),
   ],
 };
@@ -117,7 +157,19 @@ export const GLOBAL_SUBREDDITS: SubredditSeed[] = general([
  * subs. Case-insensitive substring match against title + body.
  */
 export const CITY_KEYWORDS: Record<string, string[]> = {
-  denver: ["denver", "rino", "lodo", "cherry creek", "highlands", "boulder-area"],
+  denver: [
+    "denver",
+    "rino",
+    "lodo",
+    "cherry creek",
+    "highlands",
+    "boulder",
+    "longmont",
+    "aurora",
+    "arvada",
+    "fort collins",
+    "colorado springs",
+  ],
   "new-orleans": [
     "new orleans",
     "nola",
@@ -127,7 +179,18 @@ export const CITY_KEYWORDS: Record<string, string[]> = {
     "treme",
     "bywater",
     "garden district",
+    "metairie",
+    "kenner",
   ],
-  paris: ["paris", "parisian", "île-de-france", "ile-de-france"],
-  calgary: ["calgary", "yyc", "kensington calgary", "inglewood calgary"],
+  paris: ["paris", "parisian", "parisien", "île-de-france", "ile-de-france"],
+  calgary: [
+    "calgary",
+    "yyc",
+    "kensington calgary",
+    "inglewood calgary",
+    "airdrie",
+    "cochrane",
+    "canmore",
+    "banff",
+  ],
 };

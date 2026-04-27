@@ -54,6 +54,48 @@ PRICE_LEVEL_MAP = {
 }
 
 
+# Place types where the food isn't the point — Google Places returns these
+# when someone evaluates food *at* the venue (e.g. concession stands at an
+# amusement park) but the venue itself isn't a restaurant. We reject these.
+NON_RESTAURANT_TYPES = {
+    "amusement_park",
+    "stadium",
+    "park",
+    "airport",
+    "shopping_mall",
+    "museum",
+    "tourist_attraction",  # debatable; many tourist spots aren't food-focused
+    "gas_station",
+    "convenience_store",
+    "gym",
+    "spa",
+    "school",
+    "university",
+    "hospital",
+    "lodging",  # hotel — drop unless restaurant is also in types (handled below)
+}
+
+# These are "ok" types — if a place has both a denied type AND an allowed type,
+# it's probably a restaurant inside a hotel/mall (the food IS the point) and
+# we keep it.
+RESTAURANT_TYPES = {
+    "restaurant",
+    "cafe",
+    "bakery",
+    "bar",
+    "bar_and_grill",
+    "fast_food_restaurant",
+    "meal_takeaway",
+    "meal_delivery",
+    "food",
+    "ice_cream_shop",
+    "coffee_shop",
+    "pizza_restaurant",
+    "sandwich_shop",
+    "deli",
+}
+
+
 def resolve_mention(
     mention: str,
     city_slug: str,
@@ -105,6 +147,24 @@ def resolve_mention(
         )
 
     candidates = [_to_candidate(p) for p in places]
+    # Drop candidates whose place type isn't food-focused (amusement parks,
+    # museums, etc.). Hotels and malls survive only if a restaurant-y type is
+    # also present (the food IS the point inside them).
+    candidates = [c for c in candidates if _is_food_place(c.types)]
+
+    if not candidates:
+        return ResolveResult(
+            mention=mention,
+            city_slug=city_slug,
+            neighborhood_hint=neighborhood_hint,
+            method="no_match",
+            confidence=0.0,
+            reasoning=(
+                f"All Google results for {query!r} were non-food venues "
+                "(amusement park / museum / etc.)."
+            ),
+        )
+
     top = candidates[0]
 
     name_matches = _names_overlap(mention, top.name)
@@ -180,8 +240,11 @@ def _search_places(
                 }
             },
             "maxResultCount": max_results,
-            # Restaurants only — drops chains' headquarters, retail stores, etc.
-            "includedType": "restaurant",
+            # NOTE: do NOT pass `includedType: "restaurant"` here — Google
+            # Places categorizes many actual food spots as cafe / bakery /
+            # bar_and_grill / meal_takeaway / etc. Filtering to "restaurant"
+            # silently drops legitimate matches (we saw this with Fruition,
+            # Noble Pig, Wolf's Tacos in the first Denver run).
         },
         timeout=15,
     )
@@ -222,8 +285,124 @@ def _names_overlap(mention: str, place_name: str) -> bool:
     return a in b or b in a
 
 
+def _is_food_place(types: list[str]) -> bool:
+    """True if the candidate looks like somewhere people go to eat.
+
+    Logic:
+      - If any restaurant-y type is present, accept (handles hotel restaurants).
+      - Else if any non-restaurant type is present, reject.
+      - Else accept (Google returned a result with no useful types).
+    """
+    type_set = set(types or [])
+    if type_set & RESTAURANT_TYPES:
+        return True
+    if type_set & NON_RESTAURANT_TYPES:
+        return False
+    return True
+
+
 def _normalize(s: str) -> str:
     s = s.lower().strip()
     for ch in [",", ".", "'", "’", "&", "-"]:
         s = s.replace(ch, " ")
     return " ".join(s.split())
+
+
+def reresolve_unresolved_extractions(city_slug: str) -> dict:
+    """Retry resolution for extractions in this city that previously failed.
+
+    Useful after tuning the resolver: old `restaurant_id IS NULL` extractions
+    get a second chance against the new logic. Successful retries:
+      - upsert the matched restaurant
+      - patch the extraction's restaurant_id, confidence, method, vote_weight
+      - mark any open flags for that extraction as resolved
+
+    Returns counts: {checked, resolved, still_failed}.
+    """
+    # Local import to avoid a resolve <-> db circular import at module load.
+    from pipeline import db
+
+    client = db.get_client()
+
+    # Walk threads → comments → extractions to find unresolved ones for this city.
+    threads = (
+        client.table("reddit_threads")
+        .select("id")
+        .eq("city_slug", city_slug)
+        .execute()
+        .data
+        or []
+    )
+    if not threads:
+        return {"checked": 0, "resolved": 0, "still_failed": 0}
+    thread_ids = [t["id"] for t in threads]
+
+    # Walk in chunks: PostgREST puts IN-clause values in the URL, and a few
+    # hundred UUIDs blows past Supabase's request line limit.
+    def _chunked(seq, size):
+        for i in range(0, len(seq), size):
+            yield seq[i : i + size]
+
+    comment_ids: list[str] = []
+    for chunk in _chunked(thread_ids, 100):
+        rows = (
+            client.table("reddit_comments")
+            .select("id")
+            .in_("thread_id", chunk)
+            .execute()
+            .data
+            or []
+        )
+        comment_ids.extend(c["id"] for c in rows)
+    if not comment_ids:
+        return {"checked": 0, "resolved": 0, "still_failed": 0}
+
+    unresolved: list[dict] = []
+    for chunk in _chunked(comment_ids, 100):
+        rows = (
+            client.table("extractions")
+            .select("id, mention_text, neighborhood_hint")
+            .is_("restaurant_id", "null")
+            .in_("comment_id", chunk)
+            .execute()
+            .data
+            or []
+        )
+        unresolved.extend(rows)
+
+    n_resolved = 0
+    n_still = 0
+    for ext in unresolved:
+        result = resolve_mention(
+            ext["mention_text"], city_slug, ext.get("neighborhood_hint")
+        )
+        db.insert_place_resolution(
+            mention=ext["mention_text"],
+            city_slug=city_slug,
+            candidate_place_id=result.candidate.place_id if result.candidate else None,
+            confidence=result.confidence,
+            method=result.method,
+            reasoning=result.reasoning,
+        )
+        if result.candidate and result.confidence >= 0.6:
+            rest_id = db.upsert_restaurant(
+                candidate=result.candidate,
+                city_slug=city_slug,
+                neighborhood=ext.get("neighborhood_hint"),
+            )
+            client.table("extractions").update(
+                {
+                    "restaurant_id": rest_id,
+                    "resolution_confidence": result.confidence,
+                    "resolution_method": result.method,
+                    "vote_weight": db._vote_weight(result),
+                }
+            ).eq("id", ext["id"]).execute()
+            client.table("flags").update({"status": "resolved"}).eq(
+                "extraction_id", ext["id"]
+            ).eq("status", "open").execute()
+            n_resolved += 1
+        else:
+            n_still += 1
+
+    return {"checked": len(unresolved), "resolved": n_resolved, "still_failed": n_still}

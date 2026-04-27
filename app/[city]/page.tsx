@@ -19,12 +19,16 @@ export default async function CityPage({ params }: PageProps) {
   const city = CITIES_BY_SLUG[slug];
   if (!city) notFound();
 
+  // Only show restaurants that have at least one extraction backing them.
+  // Restaurants resolved in past runs but no longer mentioned (e.g. orphans
+  // after a demo-data wipe) have null city_rank and would clutter the list.
   const { data, error } = await supabase
     .from("restaurants_with_scores")
     .select("*")
     .eq("city_slug", slug)
     .eq("closed", false)
-    .order("city_rank", { ascending: true, nullsFirst: false });
+    .not("city_rank", "is", null)
+    .order("city_rank", { ascending: true });
 
   if (error) {
     throw new Error(`Failed to load ${slug} restaurants: ${error.message}`);

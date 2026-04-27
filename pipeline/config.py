@@ -29,6 +29,9 @@ class Settings(BaseModel):
     reddit_client_secret: Optional[str] = None
     reddit_user_agent: Optional[str] = None
 
+    # Apify token — used by discover stage as a Reddit-API alternative.
+    apify_api_token: Optional[str] = None
+
     @classmethod
     def from_env(cls) -> Settings:
         return cls(
@@ -39,6 +42,7 @@ class Settings(BaseModel):
             reddit_client_id=os.environ.get("REDDIT_CLIENT_ID") or None,
             reddit_client_secret=os.environ.get("REDDIT_CLIENT_SECRET") or None,
             reddit_user_agent=os.environ.get("REDDIT_USER_AGENT") or None,
+            apify_api_token=os.environ.get("APIFY_API_TOKEN") or None,
         )
 
 
