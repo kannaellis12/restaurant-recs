@@ -55,6 +55,47 @@ export async function resolveFlag(formData: FormData): Promise<void> {
 }
 
 /**
+ * Assign cuisines to a restaurant flagged with `kind = missing_cuisine`.
+ * The form sends one or more `cuisines` entries (max 3, validated client-
+ * side) plus the flag id. We update the restaurant row and resolve the flag.
+ */
+export async function assignCuisines(formData: FormData): Promise<void> {
+  const flagId = String(formData.get("flagId") ?? "");
+  const cuisines = formData
+    .getAll("cuisines")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!flagId || cuisines.length === 0) return;
+
+  const supabase = adminClient();
+
+  // Look up which restaurant this flag is about, then write to it.
+  const { data: flag } = await supabase
+    .from("flags")
+    .select("restaurant_id")
+    .eq("id", flagId)
+    .single();
+  if (!flag?.restaurant_id) return;
+
+  await supabase
+    .from("restaurants")
+    .update({ cuisines })
+    .eq("id", flag.restaurant_id);
+
+  await supabase
+    .from("flags")
+    .update({
+      status: "resolved",
+      resolved_at: new Date().toISOString(),
+      resolved_by: "admin",
+    })
+    .eq("id", flagId);
+
+  revalidatePath("/admin");
+}
+
+/**
  * Dismiss a flag — the mention was a false positive (extract pulled
  * something that isn't a real restaurant). Also nulls the extraction's
  * restaurant_id and zeros its vote weight so it stops contributing to

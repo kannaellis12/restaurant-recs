@@ -288,6 +288,38 @@ def insert_flag(
     ).execute()
 
 
+def ensure_missing_cuisine_flag(
+    *,
+    restaurant_id: str,
+    restaurant_name: str,
+) -> bool:
+    """Create a `missing_cuisine` flag for this restaurant if one isn't already
+    open. Idempotent — repeated pipeline runs won't dupe.
+
+    Returns True if a new flag was inserted, False if one already existed.
+    """
+    client = get_client()
+    existing = (
+        client.table("flags")
+        .select("id")
+        .eq("kind", "missing_cuisine")
+        .eq("restaurant_id", restaurant_id)
+        .eq("status", "open")
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if existing:
+        return False
+    insert_flag(
+        kind="missing_cuisine",
+        restaurant_id=restaurant_id,
+        details={"restaurant_name": restaurant_name},
+    )
+    return True
+
+
 # --- helpers ----------------------------------------------------------------
 
 

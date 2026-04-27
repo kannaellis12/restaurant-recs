@@ -26,7 +26,11 @@ from pipeline.cities import CITIES
 from pipeline.stages.discover import discover_subreddit
 from pipeline.stages.extract import extract_from_comment
 from pipeline.stages.relevance import score_thread_relevance
-from pipeline.stages.resolve import resolve_mention, reresolve_unresolved_extractions
+from pipeline.stages.resolve import (
+    cuisines_from_types,
+    reresolve_unresolved_extractions,
+    resolve_mention,
+)
 from pipeline.stages.score import compute_scores_for_city
 
 
@@ -123,11 +127,20 @@ def main() -> int:
                 )
                 restaurant_id = None
                 if r.candidate and r.confidence >= 0.6:
+                    inferred_cuisines = cuisines_from_types(r.candidate.types)
                     restaurant_id = db.upsert_restaurant(
                         candidate=r.candidate,
                         city_slug=args.city,
                         neighborhood=e.neighborhood_hint,
+                        cuisines=inferred_cuisines,
                     )
+                    # If Google's types didn't yield any of our 26 cuisines,
+                    # surface this in the admin queue so a human can tag it.
+                    if not inferred_cuisines:
+                        db.ensure_missing_cuisine_flag(
+                            restaurant_id=restaurant_id,
+                            restaurant_name=r.candidate.name,
+                        )
                     if r.candidate.place_id not in seen_place_ids:
                         n_resolved += 1
                         seen_place_ids.add(r.candidate.place_id)

@@ -301,6 +301,99 @@ def _is_food_place(types: list[str]) -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# Cuisine inference from Google Places types
+#
+# Google's place types are pretty well-aligned with our 26-cuisine taxonomy
+# (lib/cuisines.ts). We translate them at upsert time so the frontend can
+# filter restaurants by cuisine immediately. Restaurants that match no entry
+# below get cuisines = [] and can be hand-tagged in /admin (later) or
+# inferred via LLM (also later).
+# ---------------------------------------------------------------------------
+
+PLACES_TYPE_TO_CUISINE: dict[str, str] = {
+    # American
+    "american_restaurant":      "american-casual",
+    "diner":                    "american-casual",
+    "fast_food_restaurant":     "american-casual",
+    "hamburger_restaurant":     "american-casual",
+    # BBQ
+    "barbecue_restaurant":      "bbq",
+    # Steakhouse
+    "steak_house":              "steakhouse",
+    # Pizza
+    "pizza_restaurant":         "pizza",
+    # Italian
+    "italian_restaurant":       "italian",
+    # French (also captures bistros/brasseries Google buckets here)
+    "french_restaurant":        "french",
+    # Mexican / Latin
+    "mexican_restaurant":       "mexican",
+    "taco_restaurant":          "mexican",
+    # Mediterranean / Greek
+    "mediterranean_restaurant": "mediterranean",
+    "greek_restaurant":         "mediterranean",
+    # Spanish / Tapas
+    "spanish_restaurant":       "spanish",
+    # Middle Eastern
+    "middle_eastern_restaurant": "middle-eastern",
+    "lebanese_restaurant":      "middle-eastern",
+    "turkish_restaurant":       "middle-eastern",
+    # East Asian
+    "chinese_restaurant":       "chinese",
+    "japanese_restaurant":      "japanese",
+    "sushi_restaurant":         "japanese",
+    "ramen_restaurant":         "ramen",
+    "korean_restaurant":        "korean",
+    "thai_restaurant":          "thai",
+    "vietnamese_restaurant":    "vietnamese",
+    # South Asian
+    "indian_restaurant":        "indian",
+    # African
+    "african_restaurant":       "ethiopian-african",
+    # Seafood
+    "seafood_restaurant":       "seafood",
+    # Vegetarian / Vegan
+    "vegetarian_restaurant":    "vegetarian-vegan",
+    "vegan_restaurant":         "vegetarian-vegan",
+    # Brunch / Breakfast
+    "breakfast_restaurant":     "brunch-breakfast",
+    "brunch_restaurant":        "brunch-breakfast",
+    # Bakery / Cafe / Dessert
+    "bakery":                   "bakery-cafe-dessert",
+    "cafe":                     "bakery-cafe-dessert",
+    "coffee_shop":              "bakery-cafe-dessert",
+    "ice_cream_shop":           "bakery-cafe-dessert",
+    "dessert_shop":             "bakery-cafe-dessert",
+    "donut_shop":               "bakery-cafe-dessert",
+    # Bar / Gastropub
+    "bar":                      "bar-gastropub",
+    "bar_and_grill":            "bar-gastropub",
+    "pub":                      "bar-gastropub",
+    "wine_bar":                 "bar-gastropub",
+}
+
+
+def cuisines_from_types(types: Optional[list]) -> list:
+    """Map a Google Places `types` list to our cuisine slugs.
+
+    Returns up to 3 distinct cuisine slugs in the order they appear in
+    Google's response (their first type tends to be most specific).
+    """
+    if not types:
+        return []
+    seen: set = set()
+    out: list = []
+    for t in types:
+        slug = PLACES_TYPE_TO_CUISINE.get(t)
+        if slug and slug not in seen:
+            seen.add(slug)
+            out.append(slug)
+            if len(out) >= 3:
+                break
+    return out
+
+
 def _normalize(s: str) -> str:
     s = s.lower().strip()
     for ch in [",", ".", "'", "’", "&", "-"]:
@@ -389,6 +482,7 @@ def reresolve_unresolved_extractions(city_slug: str) -> dict:
                 candidate=result.candidate,
                 city_slug=city_slug,
                 neighborhood=ext.get("neighborhood_hint"),
+                cuisines=cuisines_from_types(result.candidate.types),
             )
             client.table("extractions").update(
                 {

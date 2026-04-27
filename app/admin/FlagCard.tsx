@@ -1,5 +1,6 @@
 import { resolveFlag, dismissFlag } from "./actions";
 import type { FlagWithContext } from "./page";
+import { CuisineAssignment } from "./CuisineAssignment";
 
 /**
  * Build a Reddit URL that scrolls to the specific comment. Without this,
@@ -20,10 +21,17 @@ const SENTIMENT_COLOR: Record<string, string> = {
 };
 
 /**
- * Server component (no client interactivity needed — buttons submit forms).
- * Embeds two server-action forms inline rather than wrapping the whole card.
+ * Server component. Dispatches on flag.kind because each kind has a
+ * different review action (resolve/dismiss vs. assign cuisines).
  */
 export function FlagCard({ flag }: { flag: FlagWithContext }) {
+  if (flag.kind === "missing_cuisine") {
+    return <MissingCuisineCard flag={flag} />;
+  }
+  return <LowConfidenceCard flag={flag} />;
+}
+
+function LowConfidenceCard({ flag }: { flag: FlagWithContext }) {
   const ext = flag.extraction;
   const rest = flag.restaurant;
   const comment = ext?.comment ?? null;
@@ -159,6 +167,51 @@ export function FlagCard({ flag }: { flag: FlagWithContext }) {
           </button>
         </form>
       </div>
+    </article>
+  );
+}
+
+/**
+ * Card for `kind = missing_cuisine` — Google Places types didn't map to any
+ * of our 26 cuisines, so we ask the admin to pick the right one(s).
+ */
+function MissingCuisineCard({ flag }: { flag: FlagWithContext }) {
+  const rest = flag.restaurant;
+  const fallbackName =
+    typeof flag.details?.restaurant_name === "string"
+      ? (flag.details.restaurant_name as string)
+      : "(unknown restaurant)";
+
+  return (
+    <article className="border border-gray-200 dark:border-gray-800 rounded-lg p-5">
+      <div className="text-xs uppercase tracking-wide text-gray-500 mb-3">
+        {flag.kind}
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-lg font-bold">{rest?.name ?? fallbackName}</h2>
+        {rest?.address && (
+          <div className="text-sm text-gray-500 mt-0.5">{rest.address}</div>
+        )}
+        {rest?.website && (
+          <a
+            href={rest.website}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 dark:text-blue-400 text-xs hover:underline"
+          >
+            {(() => {
+              try {
+                return new URL(rest.website).host;
+              } catch {
+                return rest.website;
+              }
+            })()}
+          </a>
+        )}
+      </div>
+
+      <CuisineAssignment flagId={flag.id} />
     </article>
   );
 }

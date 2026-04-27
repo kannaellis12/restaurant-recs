@@ -34,3 +34,10 @@ supabase/.temp
 .idea/
 .vscode/
 *.swp
+
+# Font kit cruft we don't ship — we only use woff2 from each Atipo bundle
+public/fonts/**/*.eot
+public/fonts/**/*-demo.html
+public/fonts/**/generator_config.txt
+public/fonts/**/stylesheet.css
+public/fonts/**/specimen_files/

@@ -1,34 +1,60 @@
 import type { Metadata } from "next";
-import { EB_Garamond, Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// Display family — replaces the design's Kalice. EB Garamond is a free Garamond
-// revival with the right editorial gravity at 100px+ headline sizes.
-const displayFont = EB_Garamond({
-  subsets: ["latin"],
+// Display family — Argesta Display by Atipo Foundry. Used for the city-name
+// hero, restaurant names, score numerals, and the italicized "." flourish.
+// Web-license-bundled in public/fonts/Argesta-Complete-Font-Web/.
+const displayFont = localFont({
+  src: [
+    {
+      path: "../public/fonts/Argesta-Complete-Font-Web/Argesta_Webfont/argestadisplay-regular-webfont.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/Argesta-Complete-Font-Web/Argesta_Webfont/argestadisplay-regularitalic-webfont.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
   variable: "--font-display-family",
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
-// Body / pull-quote family — replaces the design's Romie. Source Serif 4 is
-// designed by Adobe for screen reading; its italic carries warmth that's
-// critical for the pull-quote treatment.
-const bodyFont = Source_Serif_4({
-  subsets: ["latin"],
+// Body / pull-quote family — Novela by Atipo Foundry. Designed as a
+// novelist's face; the italic carries the warmth that makes pull-quotes
+// the hero element of the editorial design.
+const bodyFont = localFont({
+  src: [
+    {
+      path: "../public/fonts/Novela-Complete-Font-Web/Novela-webfontkit/novela-regular-webfont.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/Novela-Complete-Font-Web/Novela-webfontkit/novela-regularitalic-webfont.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
   variable: "--font-body-family",
-  weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
-// Mono family — for ranks, mention counts, dates, section numbers, and all
-// UI chrome text. Always uppercase with letter-spacing in our base class.
-const monoFont = JetBrains_Mono({
-  subsets: ["latin"],
+// Mono family — Basier Square Mono Regular by Atipo Foundry. Single weight
+// only (the full family is paid). All mono text is uppercase + letter-
+// spaced per the design direction; we never need bold or italic mono, so
+// regular alone is sufficient.
+const monoFont = localFont({
+  src: [
+    {
+      path: "../public/fonts/Basier_Mono_Square_Regular/Webfont/Basier-Square-Mono-Regular-Webfont/basiersquaremono-regular-webfont.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
   variable: "--font-mono-family",
-  weight: ["400", "500", "600"],
   display: "swap",
 });
 
