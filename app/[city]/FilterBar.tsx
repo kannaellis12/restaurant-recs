@@ -1,7 +1,13 @@
 "use client";
 
 import { CUISINES_BY_SLUG } from "@/lib/cuisines";
-import { hasActiveFilters, type Filters, type SortKey } from "@/lib/types";
+import {
+  TAG_LABELS,
+  hasActiveFilters,
+  type Filters,
+  type SortKey,
+  type Tag,
+} from "@/lib/types";
 
 type Props = {
   sortKey: SortKey;
@@ -10,8 +16,13 @@ type Props = {
   onFiltersChange: (f: Filters) => void;
   availableCuisines: string[];
   availableNeighborhoods: string[];
+  availableTags: Tag[];
   totalCount: number;
   filteredCount: number;
+  searchQuery: string;
+  onSearchQueryChange: (q: string) => void;
+  /** Called when the user submits the search (Enter). Selects + flies to a match. */
+  onSearchSubmit: () => void;
   onClearFilters: () => void;
 };
 
@@ -38,15 +49,38 @@ export function FilterBar({
   onFiltersChange,
   availableCuisines,
   availableNeighborhoods,
+  availableTags,
   totalCount,
   filteredCount,
+  searchQuery,
+  onSearchQueryChange,
+  onSearchSubmit,
   onClearFilters,
 }: Props) {
-  const active = hasActiveFilters(filters);
+  const active = hasActiveFilters(filters) || searchQuery.length > 0;
   const sortOptions = filters.hideService ? SORT_OPTIONS_HIDE_SERVICE : SORT_OPTIONS;
 
   return (
     <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-2 flex gap-3 items-center flex-wrap text-sm">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSearchSubmit();
+        }}
+        className="flex items-center"
+      >
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
+          placeholder="Search restaurants…"
+          aria-label="Search restaurants"
+          className="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+        />
+      </form>
+
+      <span className="text-gray-300 dark:text-gray-700">|</span>
+
       <Field label="Sort">
         <select
           value={sortKey}
@@ -117,6 +151,28 @@ export function FilterBar({
           ))}
         </select>
       </Field>
+
+      {availableTags.length > 0 && (
+        <Field label="Vibe">
+          <select
+            value={filters.tag ?? ""}
+            onChange={(e) =>
+              onFiltersChange({
+                ...filters,
+                tag: (e.target.value || null) as Tag | null,
+              })
+            }
+            className={selectClasses}
+          >
+            <option value="">Any</option>
+            {availableTags.map((t) => (
+              <option key={t} value={t}>
+                {TAG_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input

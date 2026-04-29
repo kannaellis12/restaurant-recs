@@ -1,0 +1,26 @@
+# Hand-curated New Orleans restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city new-orleans --urls-file thread-urls/nola.txt
+# Lines starting with # are ignored. Add one Reddit URL per line.
+https://www.reddit.com/r/NOLA/comments/1oivskt/what_are_the_true_best_restaurants_in_new_orleans/
+https://www.reddit.com/r/AskNOLA/comments/1rfd7zk/whatre_your_cant_miss_restaurants_in_nola/
+https://www.reddit.com/r/AskNOLA/comments/1rar8tx/which_of_these_restaurants_are_cant_miss/
+https://www.reddit.com/r/AskNOLA/comments/1nbcfoj/what_are_your_current_must_go_restaurants_in_nola/
+https://www.reddit.com/r/AskNOLA/comments/1jnh07z/best_food_in_and_near_the_french_quarter/
+https://www.reddit.com/r/AskNOLA/comments/1qajgdp/12_restaurants/
+https://www.reddit.com/r/AskNOLA/comments/1k7kith/restaurants_that_are_an_absolute_must/
+https://www.reddit.com/r/AskNOLA/comments/1s3pnpg/looking_for_restaurant_recommendations/
+https://www.reddit.com/r/AskNOLA/comments/1p4zye4/thoughts_on_restaurant_list/
+https://www.reddit.com/r/NOLA/comments/1nbu4ab/nontourist_places_to_eat_in_new_orleans/
+https://www.reddit.com/r/AskNOLA/comments/1oec2mw/i_did_not_like_the_food_in_new_orleans_where_did/
+https://www.reddit.com/r/NewOrleans/comments/1m778xz/updated_best_new_orleans_restaurants_new_york/
+https://www.reddit.com/r/NewOrleans/comments/1mrwly1/lets_do_new_orleans_restaurants/
+https://www.reddit.com/r/AskNOLA/comments/1i1e2gs/off_the_beaten_path_dining_around_nola/
+https://www.reddit.com/r/AskNOLA/comments/1o9agpo/fine_dining_in_the_french_quarter/
+https://www.reddit.com/r/NewOrleans/comments/1s01rzz/best_bakery_in_nola_area/
+https://www.reddit.com/r/AskNOLA/comments/1stmn1v/best_bakeries_in_nola/
+https://www.reddit.com/r/AskNOLA/comments/1hx0rrx/new_orleans_bakeries/
+https://www.reddit.com/r/NewOrleans/comments/1mstbnt/savory_pastries/
+https://www.reddit.com/r/AskNOLA/comments/1qcikvy/best_pastries_in_french_quarter_business_district/
+https://www.reddit.com/r/NewOrleans/comments/1ijyiyl/best_bakery_to_get_sourdough/
+https://www.reddit.com/r/NewOrleans/comments/1mp5u5d/85_bakery_is_now_open/
+https://www.reddit.com/r/AskNOLA/comments/1ik491l/which_neighborhood_should_i_walk_around_to_hit/

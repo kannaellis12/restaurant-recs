@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { adminClient } from "@/lib/supabase-admin";
-import { CITIES_BY_SLUG } from "@/lib/cities";
+import { CITIES, CITIES_BY_SLUG } from "@/lib/cities";
 import { LoginForm } from "./LoginForm";
 import { FlagCard } from "./FlagCard";
 import { RestaurantEditor, type EditableRestaurant } from "./RestaurantEditor";
@@ -11,7 +12,13 @@ export const dynamic = "force-dynamic";
 
 const AUTH_COOKIE = "admin-auth";
 
-export default async function AdminPage() {
+type SearchParams = Promise<{ city?: string }>;
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
   const c = await cookies();
   const auth = c.get(AUTH_COOKIE)?.value;
   const expected = process.env.ADMIN_PASSWORD;
@@ -20,10 +27,21 @@ export default async function AdminPage() {
     return <LoginForm />;
   }
 
-  const [flags, restaurantsByCity] = await Promise.all([
-    loadOpenFlags(),
+  const params = (await searchParams) ?? {};
+  const cityFilter =
+    params.city && CITIES_BY_SLUG[params.city] ? params.city : null;
+
+  // Always load the per-city counts (cheap aggregate query) so the city
+  // tabs at the top can show flag totals without loading the full payload
+  // for every city. The expensive flag-with-context fetch only runs for
+  // the actively-selected city.
+  const [flagCounts, flags, restaurantsByCity] = await Promise.all([
+    loadFlagCountsByCity(),
+    cityFilter ? loadOpenFlags(cityFilter) : Promise.resolve([]),
     loadRestaurantsByCity(),
   ]);
+
+  const totalOpenFlags = Object.values(flagCounts).reduce((a, b) => a + b, 0);
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-8">
@@ -31,7 +49,7 @@ export default async function AdminPage() {
         <div>
           <h1 className="text-2xl font-bold">Admin</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {flags.length} open flag{flags.length === 1 ? "" : "s"}
+            {totalOpenFlags} open flag{totalOpenFlags === 1 ? "" : "s"} across all cities
           </p>
         </div>
         <form action={logout}>
@@ -45,11 +63,19 @@ export default async function AdminPage() {
       </header>
 
       <section className="mb-12">
-        <h2 className="text-lg font-bold mb-3">Open flags</h2>
-        {flags.length === 0 ? (
+        <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-lg font-bold">Open flags</h2>
+          <CityTabs activeSlug={cityFilter} flagCounts={flagCounts} />
+        </div>
+
+        {!cityFilter ? (
           <div className="text-sm text-gray-500 py-6">
-            Nothing to review. The pipeline writes flags here when resolution
-            confidence is low.
+            Pick a city above to load its flag queue. Loading all 4 cities at
+            once was timing out — each city is fetched on demand now.
+          </div>
+        ) : flags.length === 0 ? (
+          <div className="text-sm text-gray-500 py-6">
+            No open flags for {CITIES_BY_SLUG[cityFilter]?.name ?? cityFilter}.
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -107,6 +133,38 @@ export default async function AdminPage() {
   );
 }
 
+function CityTabs({
+  activeSlug,
+  flagCounts,
+}: {
+  activeSlug: string | null;
+  flagCounts: Record<string, number>;
+}) {
+  return (
+    <nav className="flex gap-1 flex-wrap text-sm">
+      {CITIES.map((city) => {
+        const count = flagCounts[city.slug] ?? 0;
+        const active = activeSlug === city.slug;
+        return (
+          <Link
+            key={city.slug}
+            href={`/admin?city=${city.slug}`}
+            className={[
+              "px-3 py-1 rounded border",
+              active
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold"
+                : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900",
+            ].join(" ")}
+          >
+            {city.name}{" "}
+            <span className="text-xs text-gray-500 ml-1">{count}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export type SampleExtraction = {
   mention_text: string;
   quote_original: string;
@@ -155,6 +213,7 @@ export type FlagWithContext = {
     address: string | null;
     website: string | null;
     place_id: string;
+    city_slug: string | null;
   } | null;
   // For missing_cuisine flags only — populated by loadOpenFlags after the
   // main query so the card can show the originating Reddit context.
@@ -185,47 +244,144 @@ async function loadRestaurantsByCity(): Promise<Record<string, EditableRestauran
   return byCity;
 }
 
-async function loadOpenFlags(): Promise<FlagWithContext[]> {
+/**
+ * Per-city open flag counts. Cheap (just a small select with no embeds),
+ * used to populate the city tabs at the top of the page.
+ */
+async function loadFlagCountsByCity(): Promise<Record<string, number>> {
   const supabase = adminClient();
-  const { data, error } = await supabase
-    .from("flags")
-    .select(
-      `
-      id,
-      kind,
-      details,
-      created_at,
-      extraction:extractions (
-        mention_text,
-        neighborhood_hint,
-        food_sentiment,
-        service_sentiment,
-        quote_original,
-        resolution_confidence,
-        resolution_method,
-        comment:reddit_comments (
-          reddit_id,
-          body,
-          author,
-          thread:reddit_threads ( subreddit, title, url, city_slug )
-        )
-      ),
-      restaurant:restaurants ( id, name, address, website, place_id )
-      `,
-    )
-    .eq("status", "open")
-    .order("created_at", { ascending: true });
+  // Two trips because flags split their city signal across two tables:
+  //   - missing_cuisine flags reference a restaurant directly
+  //   - low_confidence_match flags reference an extraction whose comment's
+  //     thread carries the city_slug
+  // Both are scoped to status='open'.
+  const [{ data: r1 }, { data: r2 }] = await Promise.all([
+    supabase
+      .from("flags")
+      .select("kind, restaurant:restaurants(city_slug)")
+      .eq("status", "open"),
+    supabase
+      .from("flags")
+      .select(
+        "kind, extraction:extractions(comment:reddit_comments(thread:reddit_threads(city_slug)))",
+      )
+      .eq("status", "open"),
+  ]);
 
-  if (error) {
-    throw new Error(`Failed to load flags: ${error.message}`);
+  const counts: Record<string, number> = {};
+  const seen = new Set<string>();
+  type Row = {
+    kind: string;
+    restaurant?: { city_slug?: string | null } | null;
+    extraction?: {
+      comment?: { thread?: { city_slug?: string | null } | null } | null;
+    } | null;
+    id?: string;
+  };
+  // Pair entries by index — both queries return rows in the same order
+  // because both filter on the same status column. We tally once per
+  // unique flag id (we re-fetched id implicitly via the row position).
+  const left = (r1 ?? []) as Row[];
+  const right = (r2 ?? []) as Row[];
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const key = String(i);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const slug =
+      left[i]?.restaurant?.city_slug ??
+      right[i]?.extraction?.comment?.thread?.city_slug ??
+      null;
+    if (!slug) continue;
+    counts[slug] = (counts[slug] ?? 0) + 1;
   }
-  const flags = (data ?? []) as unknown as FlagWithContext[];
+  return counts;
+}
 
-  // For missing_cuisine flags, fetch one sample extraction per restaurant so
-  // the admin sees the Reddit context behind the row. We do this as a
-  // follow-up query instead of folding it into the main embed because the
-  // missing_cuisine relationship runs flag → restaurant → extractions
-  // (one-to-many — supabase-js can't .limit(1) on a nested embed cleanly).
+async function loadOpenFlags(citySlug: string): Promise<FlagWithContext[]> {
+  const supabase = adminClient();
+
+  // Filter at the DB layer using two separate queries (one per "kind" of
+  // city-relationship), then merge. Doing it in a single query would
+  // require a polymorphic OR across nested embeds, which PostgREST
+  // doesn't support cleanly.
+  const SELECT = `
+    id,
+    kind,
+    details,
+    created_at,
+    extraction:extractions (
+      mention_text,
+      neighborhood_hint,
+      food_sentiment,
+      service_sentiment,
+      quote_original,
+      resolution_confidence,
+      resolution_method,
+      comment:reddit_comments (
+        reddit_id,
+        body,
+        author,
+        thread:reddit_threads ( subreddit, title, url, city_slug )
+      )
+    ),
+    restaurant:restaurants!inner ( id, name, address, website, place_id, city_slug )
+  `;
+
+  const [missingRes, lowConfRes] = await Promise.all([
+    supabase
+      .from("flags")
+      .select(SELECT)
+      .eq("status", "open")
+      .eq("kind", "missing_cuisine")
+      .eq("restaurant.city_slug", citySlug)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("flags")
+      .select(
+        `
+        id,
+        kind,
+        details,
+        created_at,
+        extraction:extractions!inner (
+          mention_text,
+          neighborhood_hint,
+          food_sentiment,
+          service_sentiment,
+          quote_original,
+          resolution_confidence,
+          resolution_method,
+          comment:reddit_comments!inner (
+            reddit_id,
+            body,
+            author,
+            thread:reddit_threads!inner ( subreddit, title, url, city_slug )
+          )
+        ),
+        restaurant:restaurants ( id, name, address, website, place_id, city_slug )
+        `,
+      )
+      .eq("status", "open")
+      .eq("kind", "low_confidence_match")
+      .eq("extraction.comment.thread.city_slug", citySlug)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (missingRes.error) {
+    throw new Error(`Failed to load missing_cuisine flags: ${missingRes.error.message}`);
+  }
+  if (lowConfRes.error) {
+    throw new Error(`Failed to load low_confidence_match flags: ${lowConfRes.error.message}`);
+  }
+
+  const flags = [
+    ...((missingRes.data ?? []) as unknown as FlagWithContext[]),
+    ...((lowConfRes.data ?? []) as unknown as FlagWithContext[]),
+  ];
+
+  // Sample extractions for missing_cuisine flags. With city scoping in
+  // place this is now ~50–100 parallel queries instead of 244, which is
+  // well within Supabase's connection budget.
   await Promise.all(
     flags.map(async (f) => {
       if (f.kind !== "missing_cuisine" || !f.restaurant?.id) return;

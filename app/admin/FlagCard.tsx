@@ -1,5 +1,6 @@
 import { resolveFlag, dismissFlag } from "./actions";
 import type { FlagWithContext } from "./page";
+import { CITIES_BY_SLUG } from "@/lib/cities";
 import { CuisineAssignment } from "./CuisineAssignment";
 import { ManualReassign } from "./ManualReassign";
 import { MissingCuisineActions } from "./MissingCuisineActions";
@@ -44,11 +45,18 @@ function LowConfidenceCard({ flag }: { flag: FlagWithContext }) {
   const service = ext?.service_sentiment;
   const quote = ext?.quote_original;
   const conf = ext?.resolution_confidence;
+  const citySlug = thread?.city_slug ?? rest?.city_slug ?? null;
+  const cityName = citySlug ? CITIES_BY_SLUG[citySlug]?.name ?? citySlug : null;
 
   return (
     <article className="border border-gray-200 dark:border-gray-800 rounded-lg p-5">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="text-xs uppercase tracking-wide text-gray-500">{flag.kind}</div>
+        <div className="text-xs uppercase tracking-wide text-gray-500">
+          {flag.kind}
+          {cityName && (
+            <span className="ml-2 text-gray-700 dark:text-gray-300">· {cityName}</span>
+          )}
+        </div>
         <div className="text-xs text-gray-500">
           conf {typeof conf === "number" ? conf.toFixed(2) : "?"}
         </div>
@@ -194,11 +202,16 @@ function MissingCuisineCard({
   const restaurantId = (flag as { restaurant?: { id?: string } | null }).restaurant?.id;
   const sample = flag.sample_extraction;
   const sampleThread = sample?.comment?.thread ?? null;
+  const citySlug = rest?.city_slug ?? null;
+  const cityName = citySlug ? CITIES_BY_SLUG[citySlug]?.name ?? citySlug : null;
 
   return (
     <article className="border border-gray-200 dark:border-gray-800 rounded-lg p-5">
       <div className="text-xs uppercase tracking-wide text-gray-500 mb-3">
         {flag.kind}
+        {cityName && (
+          <span className="ml-2 text-gray-700 dark:text-gray-300">· {cityName}</span>
+        )}
       </div>
 
       <div className="mb-4">

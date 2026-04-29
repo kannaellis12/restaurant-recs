@@ -18,6 +18,9 @@ export type RestaurantSummary = {
   location: [number, number];
   cuisines: string[];
 
+  /** Sticky vibe/occasion tags (≥2 supporting extractions). Closed taxonomy. */
+  tags: Tag[];
+
   /** 0..1; null when no food sentiment was extracted */
   foodScore: number | null;
   foodUniqueUsers: number;
@@ -33,12 +36,37 @@ export type RestaurantSummary = {
   cityRank: number;
 };
 
+export const TAGS = [
+  "date_night",
+  "hidden_gem",
+  "hole_in_the_wall",
+  "great_views",
+  "cheap_eats",
+  "special_occasion",
+  "late_night",
+  "outdoor_seating",
+] as const;
+
+export type Tag = (typeof TAGS)[number];
+
+export const TAG_LABELS: Record<Tag, string> = {
+  date_night: "Date night",
+  hidden_gem: "Hidden gem",
+  hole_in_the_wall: "Hole in the wall",
+  great_views: "Great views",
+  cheap_eats: "Cheap eats",
+  special_occasion: "Special occasion",
+  late_night: "Late night",
+  outdoor_seating: "Outdoor seating",
+};
+
 export type SortKey = "rank" | "food" | "service" | "volume" | "recent";
 
 export type Filters = {
   cuisine: string | null;
   neighborhood: string | null;
   priceLevel: 1 | 2 | 3 | 4 | null;
+  tag: Tag | null;
   /**
    * View toggle, not a row filter: when true the UI hides every service
    * score badge and the "Sort by service" option. Doesn't change which
@@ -52,6 +80,7 @@ export const EMPTY_FILTERS: Filters = {
   cuisine: null,
   neighborhood: null,
   priceLevel: null,
+  tag: null,
   hideService: false,
 };
 
@@ -60,6 +89,7 @@ export function hasActiveFilters(f: Filters): boolean {
     f.cuisine !== null ||
     f.neighborhood !== null ||
     f.priceLevel !== null ||
+    f.tag !== null ||
     f.hideService
   );
 }

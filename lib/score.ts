@@ -15,12 +15,15 @@ import { adminClient } from "./supabase-admin";
  * If you change the formula here, change it in pipeline/stages/score.py too.
  */
 
+const TAG_STICK_THRESHOLD = 2;
+
 type ExtractionRow = {
   restaurant_id: string | null;
   food_sentiment: "positive" | "negative" | "mixed" | null;
   service_sentiment: "positive" | "negative" | "mixed" | null;
   vote_weight: number | string;
   comment_id: string;
+  tags: string[] | null;
 };
 
 type Aggregate = {
@@ -33,6 +36,7 @@ type Aggregate = {
   service_negative: number;
   service_unique_users: number;
   total_unique_users: number;
+  tags: string[];
 };
 
 export async function computeScoresForCity(citySlug: string): Promise<number> {
@@ -57,7 +61,7 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
     const chunk = restaurantIds.slice(i, i + CHUNK);
     const { data, error } = await supabase
       .from("extractions")
-      .select("restaurant_id, food_sentiment, service_sentiment, vote_weight, comment_id")
+      .select("restaurant_id, food_sentiment, service_sentiment, vote_weight, comment_id, tags")
       .in("restaurant_id", chunk);
     if (error) throw new Error(`Failed to fetch extractions: ${error.message}`);
     if (data) extractions.push(...(data as unknown as ExtractionRow[]));
@@ -77,29 +81,44 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
       byRestaurant.set(row.restaurant_id, agg);
     }
     if (!users) {
-      users = { food: new Set<string>(), service: new Set<string>() };
+      users = {
+        food: new Set<string>(),
+        service: new Set<string>(),
+        tagCounts: new Map<string, number>(),
+      };
       usersByRestaurant.set(row.restaurant_id, users);
     }
     accumulate(agg, users, row);
   }
 
   // Finalize: compute scores from the running totals, drop zero-volume rows.
-  const scored: Array<{ restaurant_id: string } & Aggregate & { city_rank: number }> = [];
+  const scored: Array<
+    { restaurant_id: string } & Aggregate & { city_rank: number | null }
+  > = [];
   for (const [id, agg] of byRestaurant) {
     if (agg.total_unique_users === 0) continue;
     agg.food_score = aspectScore(agg.food_positive, agg.food_negative);
     agg.service_score = aspectScore(agg.service_positive, agg.service_negative);
-    scored.push({ restaurant_id: id, ...agg, city_rank: 0 });
+    const counts = usersByRestaurant.get(id)?.tagCounts ?? new Map();
+    agg.tags = [...counts.entries()]
+      .filter(([, n]) => n >= TAG_STICK_THRESHOLD)
+      .map(([t]) => t)
+      .sort();
+    scored.push({ restaurant_id: id, ...agg, city_rank: null });
   }
 
-  // 4. Rank by Bayesian-smoothed food score, then total volume.
-  scored.sort((a, b) => {
+  // 4. Rank by Bayesian-smoothed food score, then total volume. Restaurants
+  //    whose ONLY signal is negative (zero positive on both aspects) get
+  //    city_rank=null so they fall out of the public list — but we still
+  //    upsert their score row so /admin can see the data.
+  const rankable = scored.filter((s) => !isOnlyNegative(s));
+  rankable.sort((a, b) => {
     const rA = rankScore(a);
     const rB = rankScore(b);
     if (rA !== rB) return rB - rA;
     return b.total_unique_users - a.total_unique_users;
   });
-  scored.forEach((s, i) => {
+  rankable.forEach((s, i) => {
     s.city_rank = i + 1;
   });
 
@@ -115,7 +134,7 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
     }
   }
 
-  return scored.length;
+  return rankable.length;
 }
 
 // ---------- internals -------------------------------------------------------
@@ -123,6 +142,7 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
 type UserTracking = {
   food: Set<string>;
   service: Set<string>;
+  tagCounts: Map<string, number>;
 };
 
 function newAggregate(): Aggregate {
@@ -136,6 +156,7 @@ function newAggregate(): Aggregate {
     service_negative: 0,
     service_unique_users: 0,
     total_unique_users: 0,
+    tags: [],
   };
 }
 
@@ -161,6 +182,10 @@ function accumulate(agg: Aggregate, users: UserTracking, row: ExtractionRow) {
     }
   }
 
+  for (const tag of row.tags ?? []) {
+    users.tagCounts.set(tag, (users.tagCounts.get(tag) ?? 0) + 1);
+  }
+
   // Derived counts in lock-step.
   agg.food_unique_users = users.food.size;
   agg.service_unique_users = users.service.size;
@@ -173,21 +198,34 @@ function accumulate(agg: Aggregate, users: UserTracking, row: ExtractionRow) {
   agg.service_negative = round3(agg.service_negative);
 }
 
+function isOnlyNegative(s: Aggregate): boolean {
+  // Negative votes exist on at least one aspect AND zero positive votes on
+  // both aspects. Mixed sentiments split 0.5 to positive, so a "mixed"
+  // review keeps the restaurant rankable.
+  const pos = s.food_positive + s.service_positive;
+  const neg = s.food_negative + s.service_negative;
+  return pos === 0 && neg > 0;
+}
+
+// Beta(α=2, β=1.5) prior — slight positive lean since Reddit mentions of a
+// restaurant skew toward recommendations. Neutral prior ≈ 0.571 (~5.7 / 10).
+// Mirrors pipeline/stages/score.py — keep them in sync.
+const SCORE_PRIOR_ALPHA = 2.0;
+const SCORE_PRIOR_BETA = 1.5;
+
 function aspectScore(positive: number, negative: number): number | null {
-  const total = positive + negative;
-  if (total === 0) return null;
-  const rate = positive / total;
-  let ratioNorm: number;
-  if (negative === 0) ratioNorm = 1.0;
-  else ratioNorm = Math.min(positive / negative / 5.0, 1.0);
-  return round3(0.75 * rate + 0.25 * ratioNorm);
+  if (positive + negative === 0) return null;
+  return round3(
+    (positive + SCORE_PRIOR_ALPHA) /
+      (positive + negative + SCORE_PRIOR_ALPHA + SCORE_PRIOR_BETA),
+  );
 }
 
 function rankScore(s: Aggregate): number {
-  const food = s.food_score ?? 0;
-  const n = s.food_unique_users;
-  const smoothing = n > 0 ? n / (n + 5) : 0;
-  return food * smoothing;
+  // The Beta prior in aspectScore already shrinks low-N scores toward the
+  // midline, so ranking just sorts by food_score. Volume tie-break lives
+  // in the comparator.
+  return s.food_score ?? 0;
 }
 
 function round3(n: number): number {

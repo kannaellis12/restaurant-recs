@@ -1,0 +1,28 @@
+# Hand-curated Calgary restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city calgary --urls-file thread-urls/calgary.txt
+# Lines starting with # are ignored.
+https://www.reddit.com/r/Calgary/comments/1nz2898/whats_the_best_restaurant_meal_youve_eaten_in_the/
+https://www.reddit.com/r/Calgary/comments/1mac8np/whats_your_top_3_restaurants_in_calgary/
+https://www.reddit.com/r/Calgary/comments/1smjwf0/your_fav_calgary_owned_restaurant/
+https://www.reddit.com/r/Calgary/comments/1slmu26/nice_local_restaurants/
+https://www.reddit.com/r/Calgary/comments/1plsk03/favourite_restaurant_that_is_reasonably_priced_in/
+https://www.reddit.com/r/Calgary/comments/1oy7gt3/what_are_some_nice_hiddengem_places_to_eat/
+https://www.reddit.com/r/Calgary/comments/1oa000u/what_are_some_of_the_most_unique_restaurants_or/
+https://www.reddit.com/r/CalgarySocialClub/comments/1rruemq/where_are_the_good_restaurants_in_calgary/
+https://www.reddit.com/r/Calgary/comments/1pxf1tc/restaurant_recs/
+https://www.reddit.com/r/alberta/comments/1iexb4u/what_are_some_cool_restaurants_in_calgary/
+https://www.reddit.com/r/Calgary/comments/1iwm7rd/best_new_restaurants/
+https://www.reddit.com/r/Calgary/comments/1h0n8pu/11_calgary_spots_make_list_of_top_100_restaurants/
+https://www.reddit.com/r/Calgary/comments/1idpjht/what_are_the_actual_most_romantic_restaurants_in/
+https://www.reddit.com/r/Calgary/comments/14thbs5/what_are_some_underrated_restaurants/
+https://www.reddit.com/r/Calgary/comments/1l5ufsh/underrated_restaurants/
+https://www.reddit.com/r/Calgary/comments/1lpc5c8/restaurant_recommendations/
+https://www.reddit.com/r/Calgary/comments/1scj95m/calgary_restaurants_that_actually_cook_from/
+https://www.reddit.com/r/Calgary/comments/1le8gsv/hole_in_the_wall_restaurants/
+https://www.reddit.com/r/Calgary/comments/1kcbuc2/highest_restaurants_in_calgary_with_a_view/
+https://www.reddit.com/r/Calgary/comments/18xw2dw/whats_the_best_food_youve_had_at_a_restaurant_in/
+https://www.reddit.com/r/Calgary/comments/1jj4uqy/best_authentic_hole_in_the_wall_restaurants/
+https://www.reddit.com/r/Calgary/comments/1srs06t/looking_for_bakerydessert_spot_recommendations/
+https://www.reddit.com/r/Calgary/comments/1pozhse/bakeries_that_are_genuinely_good_and_not/
+https://www.reddit.com/r/Calgary/comments/1pp274f/best_coffee_in_calgary/
+https://www.reddit.com/r/Calgary/comments/1ovo45t/is_there_a_coffee_shop_in_calgary_thats_open_late/

@@ -27,6 +27,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.82,
     serviceUniqueUsers: 31,
     totalUniqueUsers: 92,
+    tags: [],
     cityRank: 1,
   },
   {
@@ -45,6 +46,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.91,
     serviceUniqueUsers: 14,
     totalUniqueUsers: 41,
+    tags: [],
     cityRank: 2,
   },
   {
@@ -63,6 +65,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.78,
     serviceUniqueUsers: 12,
     totalUniqueUsers: 51,
+    tags: [],
     cityRank: 3,
   },
   {
@@ -81,6 +84,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.86,
     serviceUniqueUsers: 18,
     totalUniqueUsers: 44,
+    tags: [],
     cityRank: 4,
   },
   {
@@ -99,6 +103,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.65,
     serviceUniqueUsers: 22,
     totalUniqueUsers: 60,
+    tags: [],
     cityRank: 5,
   },
   {
@@ -117,6 +122,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: null,
     serviceUniqueUsers: 0,
     totalUniqueUsers: 29,
+    tags: [],
     cityRank: 6,
   },
   {
@@ -135,6 +141,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.72,
     serviceUniqueUsers: 9,
     totalUniqueUsers: 38,
+    tags: [],
     cityRank: 7,
   },
   {
@@ -153,6 +160,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.71,
     serviceUniqueUsers: 11,
     totalUniqueUsers: 30,
+    tags: [],
     cityRank: 8,
   },
   {
@@ -171,6 +179,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.68,
     serviceUniqueUsers: 38,
     totalUniqueUsers: 81,
+    tags: [],
     cityRank: 9,
   },
   {
@@ -189,6 +198,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     serviceScore: 0.59,
     serviceUniqueUsers: 24,
     totalUniqueUsers: 56,
+    tags: [],
     cityRank: 10,
   },
 ];

@@ -44,5 +44,7 @@ export type RestaurantWithScoresRow = {
   service_score: number | null;
   service_unique_users: number;
   total_unique_users: number;
+  /** Vibe/occasion tags from the restaurant_scores aggregation. */
+  tags: string[];
   city_rank: number | null;
 };

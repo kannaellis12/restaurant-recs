@@ -6,15 +6,34 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { City } from "@/lib/cities";
 import type { RestaurantSummary } from "@/lib/types";
 
+export type MapBounds = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
 type Props = {
   city: City;
   restaurants: RestaurantSummary[];
   selectedId: string | null;
   hoveredId: string | null;
   onSelect: (id: string | null) => void;
+  /**
+   * Fires whenever the map's visible bounds change (after load + on every
+   * moveend). CityView uses this to filter the list to what's in view.
+   */
+  onBoundsChange?: (bounds: MapBounds) => void;
 };
 
-export function CityMap({ city, restaurants, selectedId, hoveredId, onSelect }: Props) {
+export function CityMap({
+  city,
+  restaurants,
+  selectedId,
+  hoveredId,
+  onSelect,
+  onBoundsChange,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Map<string, { marker: Marker; el: HTMLDivElement }>>(new Map());
@@ -44,17 +63,37 @@ export function CityMap({ city, restaurants, selectedId, hoveredId, onSelect }: 
     });
     mapRef.current = map;
 
-    const onLoad = () => setMapLoaded(true);
+    const emitBounds = () => {
+      if (!onBoundsChange) return;
+      const b = map.getBounds();
+      if (!b) return;
+      onBoundsChange({
+        west: b.getWest(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        north: b.getNorth(),
+      });
+    };
+
+    const onLoad = () => {
+      setMapLoaded(true);
+      emitBounds();
+    };
     map.on("load", onLoad);
+    map.on("moveend", emitBounds);
 
     return () => {
       map.off("load", onLoad);
+      map.off("moveend", emitBounds);
       markersRef.current.forEach(({ marker }) => marker.remove());
       markersRef.current.clear();
       map.remove();
       mapRef.current = null;
       setMapLoaded(false);
     };
+    // We intentionally exclude `onBoundsChange` from deps — re-running this
+    // effect would tear down and re-create the map on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city.center, city.zoom]);
 
   // Sync markers whenever the restaurant set or load state changes.

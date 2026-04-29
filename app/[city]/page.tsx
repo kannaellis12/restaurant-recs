@@ -51,6 +51,7 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
     priceLevel: (row.price_level ?? null) as 1 | 2 | 3 | 4 | null,
     location: [row.lng, row.lat],
     cuisines: row.cuisines ?? [],
+    tags: ((row.tags ?? []) as RestaurantSummary["tags"]),
     foodScore: row.food_score,
     foodUniqueUsers: row.food_unique_users,
     serviceScore: row.service_score,

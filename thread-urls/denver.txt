@@ -1,0 +1,37 @@
+# Hand-curated Denver restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city denver --urls-file thread-urls/denver.txt
+# Lines starting with # are ignored. Add one Reddit URL per line.
+# Denver threads:
+https://www.reddit.com/r/denverfood/comments/1rzjm2h/if_you_could_recommend_one_restaurant_in_denver/
+https://www.reddit.com/r/denverfood/comments/1qewtcd/if_you_had_to_pick_5_denver_restaurants_for_life/
+https://www.reddit.com/r/denverfood/comments/1eokjt2/ive_visited_400_restaurants_since_i_moved_to/
+https://www.reddit.com/r/Denver/comments/1nfehc7/favorite_restaurants_in_the_downtown_area/
+https://www.reddit.com/r/denverfood/comments/1ooobqz/what_are_the_best_denver_restaurants_purely_for/
+https://www.reddit.com/r/denverfood/comments/1ruydhc/3_months_left_in_denvercolorado_must_try/
+https://www.reddit.com/r/denverfood/comments/1p31vfn/ive_lived_here_for_3_years_now_and_have_been_to/
+https://www.reddit.com/r/denverfood/comments/1px5ysc/hidden_gem_restaurants_in_denver_that_locals_love/
+https://www.reddit.com/r/denverfood/comments/1sgtbq9/quintessential_denver_restaurants/
+https://www.reddit.com/r/Denver/comments/1b1x3xd/best_restaurants_to_bring_outoftowners_to/
+https://www.reddit.com/r/denverfood/comments/1qdp9c1/the_top_50_restaurants_in_denver_right_now/
+https://www.reddit.com/r/denverfood/comments/1bsij9y/iconic_denver_restaurants_meals_that_one_has_to/
+https://www.reddit.com/r/denverfood/comments/1pycgp3/pls_share_your_fav_restaurants_in_denver/
+https://www.reddit.com/r/denverfood/comments/1pkt1fe/the_8_best_denver_restaurants_that_you_need_to/
+https://www.reddit.com/r/denverfood/comments/1b6fom5/been_living_in_denver_for_a_little_over_a_year/
+https://www.reddit.com/r/denverfood/comments/1g8abqy/highend_denver_restaurants_if_you_want_to_splurge/
+https://www.reddit.com/r/denverfood/comments/1lijh2i/cant_miss_restaurants_in_denver/
+https://www.reddit.com/r/denverfood/comments/1suicdj/best_food_in_south_denver/
+https://www.reddit.com/r/denverfood/comments/1nyfmhu/5280s_25_best_restaurants_is_out/
+https://www.reddit.com/r/denverfood/comments/1ocmjax/your_go_to_for_current_best_of/
+https://www.reddit.com/r/denverfood/comments/1rl2nak/denver_restaurant_week_picks/
+https://www.reddit.com/r/denverfood/comments/1rigfd3/what_denver_restaurants_encapsulate_this/
+https://www.reddit.com/r/denverfood/comments/1h58eos/hidden_gems/
+https://www.reddit.com/r/denverfood/comments/1lhb7sc/you_have_one_night_in_denver_where_are_you_going/
+https://www.reddit.com/r/Denver/comments/1lhw6ug/romantic_dinnerdate_night_restaurants/
+https://www.reddit.com/r/denverfood/comments/1rl2nak/denver_restaurant_week_picks/
+https://www.reddit.com/r/denverfood/comments/1bsqppj/leaving_denver_must_not_miss_restaurants/
+https://www.reddit.com/r/denverfood/comments/1sunnj6/looking_for_quality_food/
+https://www.reddit.com/r/denverfood/comments/1sxdgoc/best_pastries_in_denver_2026/
+https://www.reddit.com/r/denverfood/comments/1m6v8rw/best_bakery_baked_goods_in_denver/
+https://www.reddit.com/r/denverfood/comments/1rev5uu/looking_for_great_bakeries/
+https://www.reddit.com/r/denverfood/comments/1qxpmkj/denver_bakeries_worth_the_extra_miles_on_my_car/
+https://www.reddit.com/r/Denver/comments/1rbry2v/guide_to_the_bagels_of_denver_and_the_surrounding/

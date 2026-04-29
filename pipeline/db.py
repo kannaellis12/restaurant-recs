@@ -206,6 +206,7 @@ def insert_extraction(
                 "vote_weight":           _vote_weight(resolve_result),
                 "resolution_confidence": resolve_result.confidence,
                 "resolution_method":     resolve_result.method,
+                "tags":                  list(extraction.tags or []),
             }
         )
         .execute()
@@ -226,6 +227,40 @@ def delete_extractions_for_comments(comment_ids: list[str]) -> None:
 
 
 # --- read helpers (used by orchestrator) ------------------------------------
+
+
+def existing_thread_reddit_ids(reddit_ids: list) -> set:
+    """Given a list of candidate reddit_ids (without prefix), return the set
+    that already exist in `reddit_threads`. Used by the import_threads flow
+    to skip Apify calls for threads we've already pulled.
+
+    Handles both stored forms (with `t3_` prefix and without) by checking
+    both shapes against the input ids.
+    """
+    if not reddit_ids:
+        return set()
+    client = get_client()
+    found: set = set()
+    # Chunk to keep PostgREST URL length reasonable.
+    CHUNK = 100
+    for i in range(0, len(reddit_ids), CHUNK):
+        chunk = reddit_ids[i : i + CHUNK]
+        # Match either bare ids ("1mac8np") or prefixed ids ("t3_1mac8np").
+        prefixed = [f"t3_{r}" for r in chunk]
+        candidates = chunk + prefixed
+        rows = (
+            client.table("reddit_threads")
+            .select("reddit_id")
+            .in_("reddit_id", candidates)
+            .execute()
+            .data
+            or []
+        )
+        for row in rows:
+            rid = row["reddit_id"]
+            # Normalize back to bare id for the caller.
+            found.add(rid[3:] if rid.startswith("t3_") else rid)
+    return found
 
 
 def fetch_threads_needing_relevance(city_slug: str) -> list[dict]:
@@ -303,6 +338,62 @@ def walk_parent_chain(
         chain.append({"author": parent.get("author"), "body": parent.get("body") or ""})
         current_reddit_id = parent_id
     return chain
+
+
+def fetch_extractions_for_retrofit(
+    city_slug: str,
+    *,
+    null_sentiment_only: bool = False,
+) -> list[dict]:
+    """Find extractions in `city_slug` along with the parent comment + thread
+    context needed to re-extract.
+
+    `null_sentiment_only=True` restricts to extractions whose food AND service
+    sentiments are both null (the original broad-sentiment retrofit case).
+    Default `False` returns every extraction in the city — used by the tag
+    backfill, which needs to revisit comments whose sentiment is already set.
+    """
+    q = (
+        get_client()
+        .table("extractions")
+        .select(
+            "id, mention_text, comment_id, restaurant_id, "
+            "food_sentiment, service_sentiment, tags, "
+            "comment:reddit_comments!inner("
+            "  reddit_id, body, thread_id, "
+            "  thread:reddit_threads!inner(id, title, body, city_slug)"
+            ")"
+        )
+        .eq("comment.thread.city_slug", city_slug)
+    )
+    if null_sentiment_only:
+        q = q.is_("food_sentiment", "null").is_("service_sentiment", "null")
+    return q.execute().data or []
+
+
+
+
+def update_extraction_sentiment(
+    *,
+    extraction_id: str,
+    food_sentiment: Optional[str],
+    service_sentiment: Optional[str],
+    quote_original: Optional[str] = None,
+    tags: Optional[list] = None,
+) -> None:
+    """Patch sentiment + tags on an extraction in place. Used by the
+    retrofit script so we can fix extractions without re-resolving (and
+    re-paying Google Places quota).
+    """
+    payload: dict = {
+        "food_sentiment": food_sentiment,
+        "service_sentiment": service_sentiment,
+    }
+    if quote_original is not None:
+        payload["quote_original"] = quote_original
+    if tags is not None:
+        payload["tags"] = list(tags)
+    get_client().table("extractions").update(payload).eq("id", extraction_id).execute()
 
 
 def comment_has_extractions(comment_id: str) -> bool:

@@ -27,6 +27,9 @@ class Extraction(BaseModel):
     restaurants. food_sentiment and service_sentiment are independently
     nullable — a comment may discuss only one aspect (or neither, in which
     case the extraction is dropped before this point).
+
+    `tags` are vibe/occasion descriptors drawn from a closed taxonomy
+    enforced in the extract prompt. Empty list when nothing applies.
     """
 
     mention: str
@@ -34,6 +37,7 @@ class Extraction(BaseModel):
     food_sentiment: Optional[AspectSentiment] = None
     service_sentiment: Optional[AspectSentiment] = None
     quote: str
+    tags: list[str] = Field(default_factory=list)
 
 
 class PlaceCandidate(BaseModel):

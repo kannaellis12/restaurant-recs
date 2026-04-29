@@ -48,29 +48,69 @@ ramen in Denver?" or "Where to get good Mexican?" unless the comment names \
 a specific restaurant on its own. Those threads name a category, not a place.
   5. NEVER extract phantom names from the title verbatim ("Best Ramen in \
 Denver" is not a restaurant).
+  6. THREAD POLARITY: When the thread itself is asking for recommendations \
+or pans, a bare-name comment (just a restaurant name, no explicit \
+evaluation) inherits the thread's implied sentiment. Treat the title as \
+the question the comment is answering:
+    - Recommendation threads ("Best date night?", "Favorite tacos?", "Must-try \
+restaurants", "Cant-miss spots", "Hidden gems", "Where would you go for \
+your last meal", "Restaurants for life") → bare name → food_sentiment=positive
+    - Pan threads ("Worst restaurants?", "Most overhyped?", "Avoid which \
+restaurants?", "Where NOT to eat") → bare name → food_sentiment=negative
+    - Neutral search threads ("Where to find sushi?", "Any good cocktail \
+bars near X?", "Open late on Sunday?") → DO NOT infer polarity; bare-name \
+comments here are neutral and should be SKIPPED entirely.
+  When inferring polarity from the thread, set the `quote` to a short \
+verbatim snippet of the comment (or the bare name itself if that's all \
+there is).
 
 For each distinct restaurant the comment evaluates, record:
   - mention: the restaurant name (verbatim from the comment, OR pulled from \
 the thread title when the rules above apply). Don't canonicalize.
   - neighborhood_hint: a neighborhood name mentioned alongside the restaurant \
 ("Highlands", "RiNo", "Congress Park"). OMIT if not stated.
-  - food_sentiment: positive | negative | mixed — about the food specifically. \
-OMIT entirely if the comment doesn't discuss food.
+  - food_sentiment: positive | negative | mixed — about the food specifically, \
+OR a broad evaluation of the restaurant that doesn't single out an aspect \
+("amazing!", "avoid this place", "wonderful staple", "cesspit"). On a \
+restaurant rec site, generic evaluations are food-coded by default — people \
+who care about service usually call it out by name. OMIT only when the \
+comment is purely about service/atmosphere with no food/overall judgment.
   - service_sentiment: positive | negative | mixed — about service, staff, wait \
-times, vibes, ambiance, or atmosphere. OMIT entirely if not discussed.
+times, vibes, ambiance, or atmosphere. OMIT entirely unless the comment \
+SPECIFICALLY calls one of those out. Don't infer service from a generic \
+positive/negative — that goes in food_sentiment.
   - quote: the most relevant verbatim snippet from the comment that supports \
 your judgment (one sentence ideally).
+  - tags: vibe/occasion descriptors drawn from this CLOSED taxonomy:
+      * date_night        — romantic, intimate, suited for couples
+      * hidden_gem        — locals' pick, off the tourist track, "you'd never know it was here"
+      * hole_in_the_wall  — unassuming exterior, dive vibe, surprisingly good
+      * great_views       — rooftop, scenic, terrace with a view, panoramic
+      * cheap_eats        — budget-friendly, affordable, "won't break the bank"
+      * special_occasion  — splurge, anniversary, fine dining ambiance, celebration
+      * late_night        — open late, post-show, after-hours
+      * outdoor_seating   — patio, terrace, garden, sidewalk seating
+    Apply a tag when EITHER (a) the thread itself is about that vibe ("Best \
+date night spots in Paris" → date_night) OR (b) the comment text directly \
+describes the restaurant that way ("rooftop with the most amazing view" → \
+great_views). Use the empty list if nothing applies. Don't invent tags \
+outside this list.
 
 Strict rules:
   - Only extract EVALUATIONS (positive or negative judgments). Skip neutral \
-mentions like "I went to X last week" or "X is on 16th street".
+mentions like "I went to X last week" or "X is on 16th street". EXCEPTION: \
+under a recommendation or pan thread (see rule 6), a bare restaurant name \
+IS an evaluation — extract it and apply the thread-implied sentiment.
   - Food and service sentiments are INDEPENDENT. "Great food but slow service" \
 → food=positive AND service=negative on the same extraction. Don't average.
   - "mixed" means the SAME aspect was both praised and criticized in the same \
 comment (e.g. "the pasta is great but the meat dishes are dry"). Don't use \
 mixed just because food and service differ.
-  - If the comment discusses ONLY food, OMIT service_sentiment. If it discusses \
-ONLY service, OMIT food_sentiment. Never invent.
+  - If the comment is a generic positive/negative judgment ("love this place", \
+"don't bother"), set food_sentiment to that judgment and OMIT service. If \
+the comment specifically discusses food, set food only. If it specifically \
+discusses both aspects, set both. ONLY omit food when the comment is purely \
+about service/staff/atmosphere with no food or overall judgment.
   - Use the exact wording the commenter used for the mention — but the mention \
 must be a RESTAURANT NAME (or unambiguous descriptor like "the Thai place on \
 Colfax"). Do NOT extract:
@@ -84,6 +124,18 @@ record an empty list.
 
 Always call the record_extractions tool, even with an empty list.
 """
+
+
+TAG_VALUES = [
+    "date_night",
+    "hidden_gem",
+    "hole_in_the_wall",
+    "great_views",
+    "cheap_eats",
+    "special_occasion",
+    "late_night",
+    "outdoor_seating",
+]
 
 
 _RECORD_TOOL: dict = {
@@ -119,6 +171,14 @@ _RECORD_TOOL: dict = {
                             "type": "string",
                             "description": "Verbatim snippet from the comment supporting the judgment.",
                         },
+                        "tags": {
+                            "type": "array",
+                            "description": (
+                                "Vibe/occasion tags from the closed taxonomy. "
+                                "Empty array if nothing applies. Don't invent tags."
+                            ),
+                            "items": {"type": "string", "enum": TAG_VALUES},
+                        },
                     },
                     "required": ["mention", "quote"],
                 },
@@ -135,7 +195,14 @@ _client: Optional[anthropic.Anthropic] = None
 def _get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        # max_retries bumped from the SDK default of 2 → 8 to ride out the
+        # 50k input-tokens-per-minute org cap on big batches. The SDK
+        # respects Retry-After headers from 429s, so this is honest waiting
+        # rather than fixed backoff.
+        _client = anthropic.Anthropic(
+            api_key=settings.anthropic_api_key,
+            max_retries=8,
+        )
     return _client
 
 
