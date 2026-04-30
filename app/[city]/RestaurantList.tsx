@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { TAG_LABELS, type RestaurantSummary, type Tag } from "@/lib/types";
 import { CUISINES_BY_SLUG } from "@/lib/cuisines";
 
@@ -12,7 +13,6 @@ type Props = {
   onPageChange: (n: number) => void;
   selectedId: string | null;
   hoveredId: string | null;
-  onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
   hideService: boolean;
   /** restaurant ids that are top-3 for the given tag — drives the ★ chip */
@@ -27,7 +27,6 @@ export function RestaurantList({
   onPageChange,
   selectedId,
   hoveredId,
-  onSelect,
   onHover,
   hideService,
   topByTag,
@@ -70,16 +69,12 @@ export function RestaurantList({
           <ol className="flex-1">
             {restaurants.map((r) => (
               <li key={r.id}>
-                <a
+                <Link
                   ref={(el) => {
                     if (el) itemRefs.current.set(r.id, el);
                     else itemRefs.current.delete(r.id);
                   }}
                   href={`/${r.citySlug}/${r.placeId}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSelect(r.id);
-                  }}
                   onMouseEnter={() => onHover(r.id)}
                   onMouseLeave={() => onHover(null)}
                   data-selected={selectedId === r.id}
@@ -135,7 +130,7 @@ export function RestaurantList({
                       )}
                     </div>
                   </div>
-                </a>
+                </Link>
               </li>
             ))}
           </ol>

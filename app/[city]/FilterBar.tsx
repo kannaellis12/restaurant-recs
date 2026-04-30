@@ -42,6 +42,9 @@ const PRICE_OPTIONS: { value: 1 | 2 | 3 | 4; label: string }[] = [
   { value: 4, label: "$$$$" },
 ];
 
+const MIN_SCORE_OPTIONS: number[] = [5, 6, 7, 7.5, 8, 8.5, 9];
+const MIN_MENTIONS_OPTIONS: number[] = [2, 5, 10, 25, 50];
+
 export function FilterBar({
   sortKey,
   onSortKeyChange,
@@ -173,6 +176,48 @@ export function FilterBar({
           </select>
         </Field>
       )}
+
+      <Field label="Min food">
+        <select
+          value={filters.minFoodScore ?? ""}
+          onChange={(e) => {
+            const raw = e.target.value;
+            onFiltersChange({
+              ...filters,
+              minFoodScore: raw ? Number(raw) : null,
+            });
+          }}
+          className={selectClasses}
+        >
+          <option value="">Any</option>
+          {MIN_SCORE_OPTIONS.map((v) => (
+            <option key={v} value={v}>
+              {v.toFixed(1)}+
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="Min reviewers">
+        <select
+          value={filters.minMentions ?? ""}
+          onChange={(e) => {
+            const raw = e.target.value;
+            onFiltersChange({
+              ...filters,
+              minMentions: raw ? Number(raw) : null,
+            });
+          }}
+          className={selectClasses}
+        >
+          <option value="">Any</option>
+          {MIN_MENTIONS_OPTIONS.map((v) => (
+            <option key={v} value={v}>
+              {v}+
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input

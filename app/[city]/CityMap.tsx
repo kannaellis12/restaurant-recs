@@ -135,18 +135,26 @@ export function CityMap({
     }
   }, [restaurants, onSelect, mapLoaded]);
 
-  // Reflect selection / hover state on the markers and pan to the selected one.
+  // Reflect selection / hover state on every visible marker.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    markersRef.current.forEach(({ el }, id) => {
+    markersRef.current.forEach(({ marker, el }, id) => {
       const isSelected = id === selectedId;
       const isHovered = id === hoveredId;
       el.dataset.selected = String(isSelected);
       el.dataset.hovered = String(isHovered);
       el.style.transform = isSelected ? "scale(1.4)" : isHovered ? "scale(1.15)" : "scale(1)";
-      el.style.zIndex = isSelected ? "10" : isHovered ? "5" : "1";
+      // z-index has to live on the wrapper Mapbox positions (not on `el`,
+      // which is the inner visual div). Setting it on `el` looks correct
+      // in dev tools but doesn't change marker stacking because the
+      // translate3d transform on the wrapper creates its own stacking
+      // context — siblings (other markers) are stacked relative to each
+      // other by document order, not by inner z-index. Empty string
+      // clears the inline style and falls back to Mapbox defaults.
+      const wrapper = marker.getElement();
+      wrapper.style.zIndex = isSelected ? "10" : isHovered ? "5" : "";
       if (isSelected) {
         el.style.background = "#2563eb";
         el.style.borderColor = "#1d4ed8";
@@ -157,12 +165,41 @@ export function CityMap({
         el.style.color = "";
       }
     });
-
-    if (selectedId) {
-      const r = restaurants.find((r) => r.id === selectedId);
-      if (r) map.flyTo({ center: r.location, zoom: Math.max(map.getZoom(), 13), duration: 600 });
-    }
   }, [selectedId, hoveredId, restaurants, mapLoaded]);
+
+  // Fly to the newly-selected restaurant. Split out from the visual-state
+  // effect above so it ONLY runs when selectedId changes — including
+  // `restaurants` in the deps would re-fire flyTo on every render (since
+  // the parent's filter memo produces a new array reference each time),
+  // and each flyTo emits `moveend` → bounds change → re-render → flyTo
+  // again, which is a tight infinite loop.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !selectedId) return;
+    const r = restaurants.find((x) => x.id === selectedId);
+    if (!r) return;
+    map.flyTo({ center: r.location, zoom: Math.max(map.getZoom(), 13), duration: 600 });
+    // `restaurants` is read via closure and intentionally NOT a dep — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, mapLoaded]);
+
+  // Hover-to-pan with a 300ms idle debounce: when the user lingers on a
+  // list item we pan the map to that restaurant. Quick scroll-through
+  // passes (each <300ms hover) never trigger a pan, so scrolling the list
+  // doesn't whip the map back and forth. We pan at current zoom (no zoom
+  // change) since hover is "look at where this is", not "commit to it".
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !hoveredId) return;
+    const timer = setTimeout(() => {
+      const r = restaurants.find((x) => x.id === hoveredId);
+      if (!r) return;
+      map.flyTo({ center: r.location, zoom: map.getZoom(), duration: 500 });
+    }, 300);
+    return () => clearTimeout(timer);
+    // `restaurants` read via closure (same reason as selectedId effect).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoveredId, mapLoaded]);
 
   return <div ref={containerRef} className="w-full h-full" />;
 }

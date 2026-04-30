@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* The editorial direction is paper-only — never dark. Override Tailwind v4's
+ * default `dark:` variant (which keys on prefers-color-scheme) so `dark:`
+ * utilities only activate when an explicit `.dark` class is in the tree.
+ * We never add that class, so `dark:` utilities are inert.
+ *
+ * Also pin `color-scheme: light` on the root so the browser renders native
+ * form widgets, autofill, and scrollbars in light mode regardless of the
+ * user's OS preference. Without this, the native <select>/<input> chrome
+ * goes dark even though our paper background stays light.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+}
+
 /* ---------------------------------------------------------------------------
  * Phase A design tokens — adapted from the editorial handoff.
  *

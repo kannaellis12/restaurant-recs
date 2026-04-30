@@ -73,7 +73,16 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
+      style={{ colorScheme: "light" }}
     >
+      <head>
+        {/* Browser-level pin: forces native form widgets and scrollbars to
+            stay light regardless of the user's OS dark-mode preference.
+            Belt-and-suspenders with the `color-scheme: light` CSS in
+            globals.css — this meta tag wins for some Chromium widgets even
+            when CSS hasn't kicked in yet. */}
+        <meta name="color-scheme" content="light" />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

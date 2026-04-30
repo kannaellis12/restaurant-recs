@@ -67,6 +67,10 @@ export type Filters = {
   neighborhood: string | null;
   priceLevel: 1 | 2 | 3 | 4 | null;
   tag: Tag | null;
+  /** Minimum food score on the 0–10 scale. Null = no minimum. */
+  minFoodScore: number | null;
+  /** Minimum total unique reviewers (food OR service). Null = no minimum. */
+  minMentions: number | null;
   /**
    * View toggle, not a row filter: when true the UI hides every service
    * score badge and the "Sort by service" option. Doesn't change which
@@ -81,6 +85,8 @@ export const EMPTY_FILTERS: Filters = {
   neighborhood: null,
   priceLevel: null,
   tag: null,
+  minFoodScore: null,
+  minMentions: null,
   hideService: false,
 };
 
@@ -90,6 +96,8 @@ export function hasActiveFilters(f: Filters): boolean {
     f.neighborhood !== null ||
     f.priceLevel !== null ||
     f.tag !== null ||
+    f.minFoodScore !== null ||
+    f.minMentions !== null ||
     f.hideService
   );
 }

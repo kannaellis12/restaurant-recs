@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { City } from "@/lib/cities";
 import {
   EMPTY_FILTERS,
@@ -24,10 +25,25 @@ type Props = {
 const PAGE_SIZE = 50;
 
 export function CityView({ city, restaurants }: Props) {
+  const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Initial filter state honors URL params so detail-page chips can deep-link
+  // back into a pre-applied filter (e.g. /denver?cuisine=italian, ?tag=date_night).
+  // After mount the filters live in local state — we don't keep them in sync
+  // with the URL on subsequent changes.
+  const [filters, setFilters] = useState<Filters>(() => {
+    const cuisine = searchParams.get("cuisine");
+    const tag = searchParams.get("tag");
+    const neighborhood = searchParams.get("neighborhood");
+    return {
+      ...EMPTY_FILTERS,
+      cuisine: cuisine || null,
+      neighborhood: neighborhood || null,
+      tag: (tag || null) as Filters["tag"],
+    };
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [page, setPage] = useState(1);
@@ -83,6 +99,15 @@ export function CityView({ city, restaurants }: Props) {
     if (filters.tag) {
       const t = filters.tag;
       r = r.filter((x) => x.tags.includes(t));
+    }
+    if (filters.minFoodScore !== null) {
+      // Score is stored on a 0–1 scale; the filter dropdown speaks 0–10.
+      const threshold = filters.minFoodScore / 10;
+      r = r.filter((x) => x.foodScore !== null && x.foodScore >= threshold);
+    }
+    if (filters.minMentions !== null) {
+      const m = filters.minMentions;
+      r = r.filter((x) => x.totalUniqueUsers >= m);
     }
     const isSearching = searchQuery.trim().length > 0;
     if (isSearching) {
@@ -189,7 +214,6 @@ export function CityView({ city, restaurants }: Props) {
           onPageChange={setPage}
           selectedId={selectedId}
           hoveredId={hoveredId}
-          onSelect={setSelectedId}
           onHover={setHoveredId}
           hideService={filters.hideService}
           topByTag={topByTag}
