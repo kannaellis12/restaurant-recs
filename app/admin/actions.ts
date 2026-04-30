@@ -388,6 +388,133 @@ export async function updateRestaurantDetails(
  * (or doesn't want to) take a specific action — e.g. a missing-cuisine flag
  * for a restaurant whose data is too thin to tag confidently.
  */
+/**
+ * Split a flag whose mention is a list of distinct restaurants
+ * ("Woody's Wings + Tuti Grill + Uncle Henry") into N separate flags,
+ * one per restaurant. The admin then resolves each new flag through
+ * the normal reassign flow.
+ *
+ * For each name we INSERT a new extraction (cloning the original's
+ * comment, sentiment, quote, and tags but with restaurant_id=null and
+ * a fresh mention_text) plus a new `low_confidence_match` flag pointing
+ * at it. The original extraction is then DELETED, which cascades to
+ * delete the original flag.
+ *
+ * Names submitted on the form are newline-separated; blank lines are
+ * ignored; we de-dupe by trimmed lowercase. A submission with fewer
+ * than 2 distinct names is a no-op (split-of-one isn't a split).
+ */
+export async function splitFlag(formData: FormData): Promise<void> {
+  const flagId = String(formData.get("flagId") ?? "");
+  const namesRaw = String(formData.get("names") ?? "");
+  if (!flagId) return;
+
+  const names = Array.from(
+    new Set(
+      namesRaw
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .map((s) => s.replace(/\s+/g, " "))
+        // De-dupe case-insensitively but preserve the casing of the first
+        // occurrence so the admin sees what they typed.
+        .map((s) => [s.toLowerCase(), s] as const),
+    ).values(),
+  ).map(([, original]) => original);
+
+  if (names.length < 2) return; // not actually splitting
+
+  const supabase = adminClient();
+
+  // Pull every field we need to clone onto the new rows. We deliberately
+  // do NOT copy `restaurant_id` — each new extraction starts unresolved
+  // so the admin reassigns each one.
+  const { data: flag } = await supabase
+    .from("flags")
+    .select(
+      `
+      id, extraction_id,
+      extraction:extractions (
+        comment_id,
+        food_sentiment,
+        service_sentiment,
+        quote_original,
+        quote_translated,
+        neighborhood_hint,
+        tags,
+        vote_weight
+      )
+      `,
+    )
+    .eq("id", flagId)
+    .single();
+
+  if (!flag?.extraction_id) {
+    throw new Error("Flag has no extraction to split.");
+  }
+  const ext = flag.extraction as unknown as {
+    comment_id: string;
+    food_sentiment: string | null;
+    service_sentiment: string | null;
+    quote_original: string;
+    quote_translated: string | null;
+    neighborhood_hint: string | null;
+    tags: string[] | null;
+    vote_weight: number | string | null;
+  } | null;
+  if (!ext) throw new Error("Flag's extraction row not found.");
+
+  const baseRow = {
+    comment_id: ext.comment_id,
+    restaurant_id: null,
+    food_sentiment: ext.food_sentiment,
+    service_sentiment: ext.service_sentiment,
+    quote_original: ext.quote_original,
+    quote_translated: ext.quote_translated,
+    neighborhood_hint: ext.neighborhood_hint,
+    tags: ext.tags ?? [],
+    // Resolution state on a freshly-split row mirrors what the resolver
+    // would have written if it had truly given up — `no_match` with zero
+    // confidence — so the admin queue treats them like any other unresolved
+    // extraction. The admin's eventual reassign will overwrite these with
+    // method='manual' and confidence=1.0.
+    resolution_method: "no_match",
+    resolution_confidence: 0,
+    vote_weight: typeof ext.vote_weight === "number" ? ext.vote_weight : 1,
+  };
+
+  const newExtractionRows = names.map((name) => ({ ...baseRow, mention_text: name }));
+
+  const { data: insertedExtractions, error: insertErr } = await supabase
+    .from("extractions")
+    .insert(newExtractionRows)
+    .select("id, mention_text");
+  if (insertErr) throw new Error(`Failed to insert split extractions: ${insertErr.message}`);
+
+  const newFlagRows = (insertedExtractions ?? []).map((row) => ({
+    kind: "low_confidence_match",
+    extraction_id: row.id as string,
+    details: {
+      reason: "split-from-multi-mention",
+      original_flag_id: flagId,
+      mention: row.mention_text,
+    },
+  }));
+  const { error: flagInsertErr } = await supabase.from("flags").insert(newFlagRows);
+  if (flagInsertErr) throw new Error(`Failed to insert split flags: ${flagInsertErr.message}`);
+
+  // Delete the original extraction. The flags FK is `on delete cascade`,
+  // so the original flag goes with it.
+  const { error: delErr } = await supabase
+    .from("extractions")
+    .delete()
+    .eq("id", flag.extraction_id);
+  if (delErr) throw new Error(`Failed to delete original extraction: ${delErr.message}`);
+
+  revalidatePath("/admin");
+}
+
+
 export async function skipFlag(formData: FormData): Promise<void> {
   const flagId = String(formData.get("flagId") ?? "");
   if (!flagId) return;

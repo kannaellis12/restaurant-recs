@@ -403,6 +403,8 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     "vietnamese_restaurant":    "vietnamese",
     # South Asian
     "indian_restaurant":        "indian",
+    # Filipino
+    "filipino_restaurant":      "filipino",
     # African
     "african_restaurant":       "ethiopian-african",
     # Seafood
@@ -420,6 +422,10 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     "ice_cream_shop":           "bakery-cafe-dessert",
     "dessert_shop":             "bakery-cafe-dessert",
     "donut_shop":               "bakery-cafe-dessert",
+    # Markets / Food halls (food courts, public markets — distinct from
+    # full-service restaurants; many have stalls people specifically rec).
+    "market":                   "market",
+    "food_court":               "market",
     # Cocktails (Google's type set is sparse here — admin will tag most
     # cocktail bars manually via the /admin restaurant editor).
     "cocktail_bar":             "cocktails",
@@ -427,7 +433,12 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     "bar":                      "bar-gastropub",
     "bar_and_grill":            "bar-gastropub",
     "pub":                      "bar-gastropub",
-    "wine_bar":                 "bar-gastropub",
+    # Brewery — has its own vibe (taproom-first, beer-driven menu) that
+    # bar/gastropub doesn't quite capture. Splits out per admin feedback.
+    "brewery":                  "brewery",
+    # Winery — wine-led venue, distinct from a generic bar/gastropub.
+    "winery":                   "winery",
+    "wine_bar":                 "winery",
 }
 
 

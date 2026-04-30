@@ -124,6 +124,7 @@ def retrofit_city(
             existing_food = row.get("food_sentiment")
             existing_service = row.get("service_sentiment")
             existing_tags = list(row.get("tags") or [])
+            existing_translation = row.get("quote_translated")
 
             # Only upgrade sentiment from null. Never downgrade or rewrite
             # already-validated signal.
@@ -132,12 +133,14 @@ def retrofit_city(
                 existing_service if existing_service is not None else match.service_sentiment
             )
             new_tags = list(match.tags or [])
+            new_translation = match.quote_translated  # may be None for English quotes
 
             food_changed = new_food != existing_food
             service_changed = new_service != existing_service
             tags_changed = sorted(new_tags) != sorted(existing_tags)
+            translation_changed = new_translation != existing_translation
 
-            if not (food_changed or service_changed or tags_changed):
+            if not (food_changed or service_changed or tags_changed or translation_changed):
                 no_change += 1
                 continue
 
@@ -155,6 +158,8 @@ def retrofit_city(
                 service_sentiment=new_service,
                 quote_original=new_quote,
                 tags=new_tags,
+                quote_translated=match.quote_translated,
+                set_quote_translated=True,
             )
             patched += 1
 

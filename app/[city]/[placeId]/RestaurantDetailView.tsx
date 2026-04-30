@@ -16,6 +16,8 @@ import { RestaurantMiniMap } from "./RestaurantMiniMap";
 export type QuoteCard = {
   id: string;
   quote: string;
+  /** English translation; null for English-source quotes. */
+  quote_translated: string | null;
   food_sentiment: Sentiment | null;
   service_sentiment: Sentiment | null;
   tags: Tag[];
@@ -325,9 +327,27 @@ function QuoteItem({ quote }: { quote: QuoteCard }) {
         </div>
       )}
 
-      <blockquote className="text-base text-gray-800 dark:text-gray-200">
-        “{quote.quote}”
-      </blockquote>
+      {/* When a translation exists, render it as the primary quote with the
+          original underneath (de-emphasized, with a small language hint).
+          For English-source extractions `quote_translated` is null and only
+          the original line shows. */}
+      {quote.quote_translated && quote.quote_translated.trim() !== quote.quote.trim() ? (
+        <>
+          <blockquote className="text-base text-gray-800 dark:text-gray-200">
+            “{quote.quote_translated}”
+          </blockquote>
+          <div className="text-xs text-gray-500 italic mt-1">
+            <span className="not-italic uppercase tracking-wide text-gray-400 mr-1">
+              Original:
+            </span>
+            “{quote.quote}”
+          </div>
+        </>
+      ) : (
+        <blockquote className="text-base text-gray-800 dark:text-gray-200">
+          “{quote.quote}”
+        </blockquote>
+      )}
 
       {(quote.food_sentiment || quote.service_sentiment || quote.tags.length > 0) && (
         <div className="flex flex-wrap gap-1.5 mt-3">

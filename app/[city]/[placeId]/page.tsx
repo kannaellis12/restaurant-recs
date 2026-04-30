@@ -39,6 +39,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
       food_sentiment,
       service_sentiment,
       quote_original,
+      quote_translated,
       tags,
       comment:reddit_comments (
         reddit_id,
@@ -59,6 +60,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
     food_sentiment: "positive" | "negative" | "mixed" | null;
     service_sentiment: "positive" | "negative" | "mixed" | null;
     quote_original: string;
+    quote_translated: string | null;
     tags: string[] | null;
     comment: {
       reddit_id: string;
@@ -106,6 +108,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
       return {
         id: e.id,
         quote: e.quote_original,
+        quote_translated: e.quote_translated,
         food_sentiment: e.food_sentiment,
         service_sentiment: e.service_sentiment,
         tags: ((e.tags ?? []) as Tag[]),

@@ -37,6 +37,10 @@ class Extraction(BaseModel):
     food_sentiment: Optional[AspectSentiment] = None
     service_sentiment: Optional[AspectSentiment] = None
     quote: str
+    # English translation of `quote` when the source is non-English. None
+    # for English quotes. The frontend renders this as the primary quote
+    # and falls back to `quote` (the original) below it when set.
+    quote_translated: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
 
 

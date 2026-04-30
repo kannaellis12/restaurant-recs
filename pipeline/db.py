@@ -202,7 +202,7 @@ def insert_extraction(
                 "food_sentiment":        extraction.food_sentiment,
                 "service_sentiment":     extraction.service_sentiment,
                 "quote_original":        extraction.quote,
-                "quote_translated":      None,
+                "quote_translated":      extraction.quote_translated,
                 "vote_weight":           _vote_weight(resolve_result),
                 "resolution_confidence": resolve_result.confidence,
                 "resolution_method":     resolve_result.method,
@@ -358,7 +358,7 @@ def fetch_extractions_for_retrofit(
         .table("extractions")
         .select(
             "id, mention_text, comment_id, restaurant_id, "
-            "food_sentiment, service_sentiment, tags, "
+            "food_sentiment, service_sentiment, tags, quote_translated, "
             "comment:reddit_comments!inner("
             "  reddit_id, body, thread_id, "
             "  thread:reddit_threads!inner(id, title, body, city_slug)"
@@ -380,10 +380,18 @@ def update_extraction_sentiment(
     service_sentiment: Optional[str],
     quote_original: Optional[str] = None,
     tags: Optional[list] = None,
+    quote_translated: Optional[str] = None,
+    set_quote_translated: bool = False,
 ) -> None:
-    """Patch sentiment + tags on an extraction in place. Used by the
-    retrofit script so we can fix extractions without re-resolving (and
-    re-paying Google Places quota).
+    """Patch sentiment + tags + (optionally) translation on an extraction in
+    place. Used by the retrofit script so we can fix extractions without
+    re-resolving (and re-paying Google Places quota).
+
+    `set_quote_translated` distinguishes "don't touch the column" from
+    "explicitly set it to NULL" — needed because the new extract prompt
+    only produces a translation for non-English quotes, and we want to
+    write the LLM's None back to the DB rather than silently leaving a
+    stale value.
     """
     payload: dict = {
         "food_sentiment": food_sentiment,
@@ -393,6 +401,8 @@ def update_extraction_sentiment(
         payload["quote_original"] = quote_original
     if tags is not None:
         payload["tags"] = list(tags)
+    if set_quote_translated:
+        payload["quote_translated"] = quote_translated
     get_client().table("extractions").update(payload).eq("id", extraction_id).execute()
 
 

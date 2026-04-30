@@ -80,7 +80,21 @@ times, vibes, ambiance, or atmosphere. OMIT entirely unless the comment \
 SPECIFICALLY calls one of those out. Don't infer service from a generic \
 positive/negative — that goes in food_sentiment.
   - quote: the most relevant verbatim snippet from the comment that supports \
-your judgment (one sentence ideally).
+your judgment (one sentence ideally). NEVER translate this — keep it in \
+the original language exactly as written. Copy the exact characters.
+  - quote_translated: a LITERAL English translation of the EXACT text in \
+`quote`. Strict rules:
+      * Translate ONLY the words in `quote`. Do not paraphrase, do not \
+summarize, do not pull in other parts of the comment. The translated string \
+should be the same content as `quote`, just in English.
+      * REQUIRED whenever `quote` contains ANY non-English text — even if \
+the quote is short, even if a few words are English-cognate, even if you \
+think an English speaker could "mostly" follow. If the quote contains French \
+("très", "pour", "c'est", "j'ai"), Spanish, Italian, etc., translate.
+      * OMIT only when `quote` is 100% English. Never echo the source \
+verbatim into this field.
+      * Preserve tone (slangy stays slangy, formal stays formal). Translate \
+proper nouns (restaurant names, neighborhoods) as-is — don't anglicize them.
   - tags: vibe/occasion descriptors drawn from this CLOSED taxonomy:
       * date_night        — romantic, intimate, suited for couples
       * hidden_gem        — locals' pick, off the tourist track, "you'd never know it was here"
@@ -169,7 +183,15 @@ _RECORD_TOOL: dict = {
                         },
                         "quote": {
                             "type": "string",
-                            "description": "Verbatim snippet from the comment supporting the judgment.",
+                            "description": "Verbatim snippet from the comment supporting the judgment. NEVER translated — keep the original language.",
+                        },
+                        "quote_translated": {
+                            "type": "string",
+                            "description": (
+                                "English translation of `quote` when the source is "
+                                "non-English. OMIT entirely when the source is already "
+                                "English."
+                            ),
                         },
                         "tags": {
                             "type": "array",

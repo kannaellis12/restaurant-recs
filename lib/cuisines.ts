@@ -26,13 +26,17 @@ export const CUISINES: Cuisine[] = [
   { slug: "thai", label: "Thai" },
   { slug: "vietnamese", label: "Vietnamese" },
   { slug: "indian", label: "Indian" },
+  { slug: "filipino", label: "Filipino" },
   { slug: "ethiopian-african", label: "Ethiopian / African" },
   { slug: "seafood", label: "Seafood" },
   { slug: "vegetarian-vegan", label: "Vegetarian / Vegan" },
   { slug: "brunch-breakfast", label: "Brunch / Breakfast" },
   { slug: "bakery-cafe-dessert", label: "Bakery / Cafe / Dessert" },
+  { slug: "market", label: "Market / Food Hall" },
   { slug: "cocktails", label: "Cocktails" },
   { slug: "bar-gastropub", label: "Bar / Gastropub" },
+  { slug: "brewery", label: "Brewery" },
+  { slug: "winery", label: "Winery / Wine Bar" },
 ];
 
 export const CUISINES_BY_SLUG: Record<string, Cuisine> = Object.fromEntries(

@@ -4,6 +4,7 @@ import { CITIES_BY_SLUG } from "@/lib/cities";
 import { CuisineAssignment } from "./CuisineAssignment";
 import { ManualReassign } from "./ManualReassign";
 import { MissingCuisineActions } from "./MissingCuisineActions";
+import { SplitFlag } from "./SplitFlag";
 
 /**
  * Build a Reddit URL that scrolls to the specific comment. Without this,
@@ -158,6 +159,7 @@ function LowConfidenceCard({ flag }: { flag: FlagWithContext }) {
       )}
 
       <div className="mt-5 flex gap-2 justify-end items-center flex-wrap">
+        <SplitFlag flagId={flag.id} originalMention={mention} />
         {thread?.city_slug && (
           <ManualReassign flagId={flag.id} citySlug={thread.city_slug} />
         )}
