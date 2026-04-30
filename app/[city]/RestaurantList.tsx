@@ -17,6 +17,9 @@ type Props = {
   hideService: boolean;
   /** restaurant ids that are top-3 for the given tag — drives the ★ chip */
   topByTag: Map<Tag, Set<string>>;
+  /** number of additional locations sharing this restaurant's name in the
+   *  current view (chains like Corvus Coffee × 3). 0 for standalones. */
+  siblingCountById: Map<string, number>;
 };
 
 export function RestaurantList({
@@ -30,6 +33,7 @@ export function RestaurantList({
   onHover,
   hideService,
   topByTag,
+  siblingCountById,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
@@ -86,7 +90,17 @@ export function RestaurantList({
                       #{r.cityRank}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate text-base">{r.name}</h3>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <h3 className="font-semibold truncate text-base">{r.name}</h3>
+                        {(siblingCountById.get(r.id) ?? 0) > 0 && (
+                          <span
+                            className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 shrink-0"
+                            title="Multiple locations in this view share this name. Click through to see them all."
+                          >
+                            {(siblingCountById.get(r.id) ?? 0) + 1} locations
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500 mt-0.5 truncate">
                         {[
                           r.neighborhood,

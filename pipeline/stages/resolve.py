@@ -384,6 +384,11 @@ PLACES_TYPE_TO_CUISINE: dict[str, str] = {
     # Mexican / Latin
     "mexican_restaurant":       "mexican",
     "taco_restaurant":          "mexican",
+    # Caribbean / Latin variants — Google's type set is sparse here.
+    # `caribbean_restaurant` is the most likely to actually appear; the
+    # rest (Venezuelan, Honduran) tend to be tagged generically by Google
+    # and end up admin-assigned via the missing_cuisine queue.
+    "caribbean_restaurant":     "caribbean",
     # Mediterranean / Greek
     "mediterranean_restaurant": "mediterranean",
     "greek_restaurant":         "mediterranean",

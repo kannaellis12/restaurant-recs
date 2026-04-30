@@ -132,11 +132,39 @@ export function CityView({ city, restaurants }: Props) {
     return [...r].sort(comparator(sortKey));
   }, [restaurants, filters, sortKey, searchQuery, mapBounds]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Chain collapse: when multiple restaurants in the visible set share the
+  // same name (Corvus Coffee × 3, Pinche Tacos × 2), keep only the
+  // highest-ranked one in the list ("the lead") and stash a count of its
+  // siblings for the UI to show as "+ N locations". Order matches the
+  // current sort, so the lead is whichever copy sorted to the front.
+  //
+  // Match key is the case-insensitive whitespace-collapsed name. Different-
+  // brand chains (Big Mamma group's Paris restaurants, which all have
+  // different names) aren't grouped — that'd require external chain data
+  // we don't have.
+  const { collapsed, siblingCountById } = useMemo(() => {
+    const seen = new Map<string, RestaurantSummary>();
+    const counts = new Map<string, number>();
+    const leadOrder: RestaurantSummary[] = [];
+    for (const r of filtered) {
+      const key = r.name.toLowerCase().replace(/\s+/g, " ").trim();
+      const existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, r);
+        counts.set(r.id, 0);
+        leadOrder.push(r);
+      } else {
+        counts.set(existing.id, (counts.get(existing.id) ?? 0) + 1);
+      }
+    }
+    return { collapsed: leadOrder, siblingCountById: counts };
+  }, [filtered]);
+
+  const totalPages = Math.max(1, Math.ceil(collapsed.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const visible = useMemo(
-    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [filtered, safePage],
+    () => collapsed.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [collapsed, safePage],
   );
 
   // Reset to page 1 whenever the filtered set changes shape — bounds, filters,
@@ -155,16 +183,18 @@ export function CityView({ city, restaurants }: Props) {
     }
   }, [filtered, selectedId]);
 
-  // Search submit: if the user types something and presses enter (or just
-  // types and the first match becomes obvious), select the top match. The
-  // map auto-flies to the selection via CityMap's selectedId effect.
+  // Search submit: if the user types something and presses enter, select
+  // the top match. Match against the COLLAPSED set (one entry per chain
+  // name), so search results map directly to what the user sees in the
+  // list and on the map. The selection auto-flies the map via CityMap's
+  // selectedId effect.
   const onSearchSubmit = () => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return;
     const match =
-      restaurants.find((r) => r.name.toLowerCase() === q) ??
-      restaurants.find((r) => r.name.toLowerCase().startsWith(q)) ??
-      restaurants.find((r) => r.name.toLowerCase().includes(q));
+      collapsed.find((r) => r.name.toLowerCase() === q) ??
+      collapsed.find((r) => r.name.toLowerCase().startsWith(q)) ??
+      collapsed.find((r) => r.name.toLowerCase().includes(q));
     if (match) setSelectedId(match.id);
   };
 
@@ -195,7 +225,7 @@ export function CityView({ city, restaurants }: Props) {
         availableNeighborhoods={availableNeighborhoods}
         availableTags={availableTags}
         totalCount={restaurants.length}
-        filteredCount={filtered.length}
+        filteredCount={collapsed.length}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         onSearchSubmit={onSearchSubmit}
@@ -208,7 +238,7 @@ export function CityView({ city, restaurants }: Props) {
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
         <RestaurantList
           restaurants={visible}
-          totalInView={filtered.length}
+          totalInView={collapsed.length}
           page={safePage}
           totalPages={totalPages}
           onPageChange={setPage}
@@ -217,6 +247,7 @@ export function CityView({ city, restaurants }: Props) {
           onHover={setHoveredId}
           hideService={filters.hideService}
           topByTag={topByTag}
+          siblingCountById={siblingCountById}
         />
         <CityMap
           city={city}
