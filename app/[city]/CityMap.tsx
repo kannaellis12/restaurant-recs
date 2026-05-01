@@ -15,7 +15,15 @@ export type MapBounds = {
 
 type Props = {
   city: City;
+  /** The visible set — drives marker rendering. Already filtered by the
+   *  viewport, search, and any user filters; sliced to one page. */
   restaurants: RestaurantSummary[];
+  /** The full city set — drives flyTo lookups. Without this we'd fail to
+   *  fly to a TagPick lead that's outside the current viewport (because
+   *  it'd be missing from `restaurants`). After flyTo lands, the moveend
+   *  bounds update naturally pulls the restaurant into `restaurants` for
+   *  marker rendering. */
+  allRestaurants: RestaurantSummary[];
   selectedId: string | null;
   hoveredId: string | null;
   onSelect: (id: string | null) => void;
@@ -26,9 +34,20 @@ type Props = {
   onBoundsChange?: (bounds: MapBounds) => void;
 };
 
+// Each marker is a column-flex of (circle, stem). Mapbox positions the wrapper
+// via translate3d on the SVG marker container; we only style our children.
+type MarkerHandle = {
+  marker: Marker;
+  /** the visible circle that holds the rank numeral */
+  circle: HTMLDivElement;
+  /** the vertical line under the circle that points to the geo location */
+  stem: HTMLDivElement;
+};
+
 export function CityMap({
   city,
   restaurants,
+  allRestaurants,
   selectedId,
   hoveredId,
   onSelect,
@@ -36,7 +55,7 @@ export function CityMap({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
-  const markersRef = useRef<Map<string, { marker: Marker; el: HTMLDivElement }>>(new Map());
+  const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
 
   // Initialize the map exactly once. We gate marker work behind `mapLoaded`
@@ -109,61 +128,101 @@ export function CityMap({
       }
     });
 
+    // Top-3 = first 3 in the visible (paged + sorted + filtered) list. They
+    // get bigger marker circles so the eye lands on them first when scanning
+    // the map. The list-side rank numbering still uses real city_rank, so a
+    // viewport that doesn't include the city's #1 still highlights its OWN
+    // top 3 — accurate to the meaning of "the cream of what you're looking at".
+    const top3Ids = new Set(restaurants.slice(0, 3).map((r) => r.id));
+
     for (const r of restaurants) {
-      if (markersRef.current.has(r.id)) continue;
+      const existing = markersRef.current.get(r.id);
+      if (existing) {
+        // Resize circle if its top-3 status changed (e.g. user paginated).
+        applyTopState(existing.circle, top3Ids.has(r.id));
+        continue;
+      }
 
       // Wrapper is what Mapbox positions via `transform: translate3d(...)`.
-      // We never touch its style.transform — overwriting it would clobber the
-      // map projection and snap the marker to the canvas origin (the
-      // "everything jumps to the corner" bug).
+      // Never touch its style.transform — overwriting it would clobber the
+      // map projection and snap the marker to the canvas origin.
       const wrapper = document.createElement("div");
       wrapper.style.cursor = "pointer";
+      wrapper.style.display = "flex";
+      wrapper.style.flexDirection = "column";
+      wrapper.style.alignItems = "center";
 
-      // Inner holds the visual styling and the select/hover scale animation.
-      const inner = document.createElement("div");
-      inner.className =
-        "w-7 h-7 rounded-full bg-white dark:bg-gray-900 border-2 border-gray-700 dark:border-gray-300 text-gray-900 dark:text-gray-100 flex items-center justify-center text-xs font-bold shadow-md transition-all";
-      inner.textContent = String(r.cityRank);
+      const circle = document.createElement("div");
+      circle.style.borderRadius = "50%";
+      circle.style.display = "grid";
+      circle.style.placeItems = "center";
+      circle.style.fontFamily = "var(--font-mono)";
+      circle.style.fontWeight = "600";
+      circle.style.boxShadow = "0 6px 16px oklch(0 0 0 / 0.08)";
+      circle.style.transition =
+        "transform 120ms ease, background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, width 120ms ease, height 120ms ease, font-size 120ms ease";
+      circle.textContent = String(r.cityRank).padStart(2, "0");
+      applyDefaultColors(circle);
+      applyTopState(circle, top3Ids.has(r.id));
 
-      wrapper.appendChild(inner);
+      const stem = document.createElement("div");
+      stem.style.width = "1.5px";
+      stem.style.height = "8px";
+      stem.style.background = "var(--color-accent)";
+      stem.style.transition = "height 120ms ease, background-color 120ms ease, opacity 120ms ease";
+
+      wrapper.appendChild(circle);
+      wrapper.appendChild(stem);
       wrapper.addEventListener("click", () => onSelect(r.id));
 
-      const marker = new mapboxgl.Marker({ element: wrapper }).setLngLat(r.location).addTo(map);
-      // Store `inner` as `el` — selection/hover effects modify the inner
-      // element, leaving Mapbox's transform on the wrapper alone.
-      markersRef.current.set(r.id, { marker, el: inner });
+      // anchor: 'bottom' so the stem's tip lands on the actual lat/lng,
+      // not the center of the circle. Without this, every pin sits ~14px
+      // above where it actually should be on the geography.
+      const marker = new mapboxgl.Marker({ element: wrapper, anchor: "bottom" })
+        .setLngLat(r.location)
+        .addTo(map);
+      markersRef.current.set(r.id, { marker, circle, stem });
     }
   }, [restaurants, onSelect, mapLoaded]);
 
-  // Reflect selection / hover state on every visible marker.
+  // Reflect selection / hover state on every visible marker. Active = the
+  // hovered or selected pin (selected wins). Other pins are dimmed when
+  // anything is active so the eye lands cleanly on the focused one.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    markersRef.current.forEach(({ marker, el }, id) => {
-      const isSelected = id === selectedId;
-      const isHovered = id === hoveredId;
-      el.dataset.selected = String(isSelected);
-      el.dataset.hovered = String(isHovered);
-      el.style.transform = isSelected ? "scale(1.4)" : isHovered ? "scale(1.15)" : "scale(1)";
-      // z-index has to live on the wrapper Mapbox positions (not on `el`,
-      // which is the inner visual div). Setting it on `el` looks correct
-      // in dev tools but doesn't change marker stacking because the
-      // translate3d transform on the wrapper creates its own stacking
-      // context — siblings (other markers) are stacked relative to each
-      // other by document order, not by inner z-index. Empty string
-      // clears the inline style and falls back to Mapbox defaults.
-      const wrapper = marker.getElement();
-      wrapper.style.zIndex = isSelected ? "10" : isHovered ? "5" : "";
-      if (isSelected) {
-        el.style.background = "#2563eb";
-        el.style.borderColor = "#1d4ed8";
-        el.style.color = "#ffffff";
+    const activeId = selectedId ?? hoveredId;
+
+    markersRef.current.forEach(({ marker, circle, stem }, id) => {
+      const isActive = id === activeId;
+      const isDimmed = activeId !== null && !isActive;
+
+      circle.style.opacity = isDimmed ? "0.25" : "1";
+      stem.style.opacity = isDimmed ? "0.25" : "1";
+
+      if (isActive) {
+        // Active state: ink fill (paper text), slight scale, taller stem.
+        circle.style.background = "var(--color-ink)";
+        circle.style.borderColor = "var(--color-ink)";
+        circle.style.color = "var(--color-paper)";
+        circle.style.transform = "scale(1.18)";
+        stem.style.background = "var(--color-ink)";
+        stem.style.height = "14px";
       } else {
-        el.style.background = "";
-        el.style.borderColor = isHovered ? "#60a5fa" : "";
-        el.style.color = "";
+        applyDefaultColors(circle);
+        circle.style.transform = "scale(1)";
+        stem.style.background = "var(--color-accent)";
+        stem.style.height = "8px";
       }
+
+      // z-index lives on the wrapper Mapbox positions (not on `circle`).
+      // Setting it on `circle` looks correct in dev tools but doesn't change
+      // marker stacking because the translate3d transform on the wrapper
+      // creates its own stacking context — siblings (other markers) stack
+      // by document order, not by inner z-index.
+      const wrapper = marker.getElement();
+      wrapper.style.zIndex = isActive ? "10" : "";
     });
   }, [selectedId, hoveredId, restaurants, mapLoaded]);
 
@@ -173,33 +232,45 @@ export function CityMap({
   // the parent's filter memo produces a new array reference each time),
   // and each flyTo emits `moveend` → bounds change → re-render → flyTo
   // again, which is a tight infinite loop.
+  //
+  // We look the restaurant up in `allRestaurants` (the full city set) NOT
+  // `restaurants` (the visible/paged set). Otherwise, selecting a TagPick
+  // lead that's outside the current viewport (e.g. Golden Saigon down in
+  // Aurora when the map is centered on downtown Denver) would silently
+  // do nothing — the restaurant gets dropped by the viewport filter
+  // before it reaches `restaurants`. After flyTo lands, the moveend
+  // bounds update naturally pulls it into the visible set.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || !selectedId) return;
-    const r = restaurants.find((x) => x.id === selectedId);
+    const r = allRestaurants.find((x) => x.id === selectedId);
     if (!r) return;
     map.flyTo({ center: r.location, zoom: Math.max(map.getZoom(), 13), duration: 600 });
-    // `restaurants` is read via closure and intentionally NOT a dep — see comment above.
+    // `allRestaurants` is read via closure and intentionally NOT a dep —
+    // see comment above on the infinite-loop hazard.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, mapLoaded]);
 
-  // Hover-to-pan with a 300ms idle debounce: when the user lingers on a
-  // list item we pan the map to that restaurant. Quick scroll-through
-  // passes (each <300ms hover) never trigger a pan, so scrolling the list
-  // doesn't whip the map back and forth. We pan at current zoom (no zoom
-  // change) since hover is "look at where this is", not "commit to it".
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapLoaded || !hoveredId) return;
-    const timer = setTimeout(() => {
-      const r = restaurants.find((x) => x.id === hoveredId);
-      if (!r) return;
-      map.flyTo({ center: r.location, zoom: map.getZoom(), duration: 500 });
-    }, 300);
-    return () => clearTimeout(timer);
-    // `restaurants` read via closure (same reason as selectedId effect).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoveredId, mapLoaded]);
-
   return <div ref={containerRef} className="w-full h-full" />;
+}
+
+/** Default (non-active) circle styling — terracotta fill, paper numeral. */
+function applyDefaultColors(circle: HTMLDivElement) {
+  circle.style.background = "var(--color-accent)";
+  circle.style.border = "1.5px solid var(--color-accent)";
+  circle.style.color = "var(--color-paper)";
+}
+
+/** Top-3 pins are physically larger so the eye lands on them first when
+ *  scanning a dense map. */
+function applyTopState(circle: HTMLDivElement, isTop: boolean) {
+  if (isTop) {
+    circle.style.width = "36px";
+    circle.style.height = "36px";
+    circle.style.fontSize = "13px";
+  } else {
+    circle.style.width = "28px";
+    circle.style.height = "28px";
+    circle.style.fontSize = "11px";
+  }
 }

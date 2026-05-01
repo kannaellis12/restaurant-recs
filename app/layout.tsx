@@ -59,9 +59,13 @@ const monoFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Reddit Restaurants",
+  title: "Restaurants of Reddit",
   description:
-    "Restaurant rankings sourced from Reddit reviews. Food first, not service complaints.",
+    "An editorial field guide to good food in Denver, Paris, Calgary, and " +
+    "New Orleans — ranked by what people actually said on Reddit.",
+  icons: {
+    icon: "/brand/RoR-glyph1.svg",
+  },
 };
 
 export default function RootLayout({

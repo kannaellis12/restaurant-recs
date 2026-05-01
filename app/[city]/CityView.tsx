@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { City } from "@/lib/cities";
@@ -81,10 +82,14 @@ export function CityView({ city, restaurants }: Props) {
     return out;
   }, [restaurants]);
 
-  // 1. Apply filters + search + viewport bounds, 2. sort.
-  // Pagination happens in a separate memo so we can re-page without
-  // re-running the filter pass.
-  const filtered = useMemo(() => {
+  // Apply only the user-driven filters — cuisine / neighborhood / price /
+  // vibe / score thresholds. The viewport and search are NOT applied here
+  // because we want a stable "set the user is looking at conceptually"
+  // that doesn't change as the map pans. The selection-clearing effect
+  // below uses this set: a TagPick lead that's outside the viewport
+  // shouldn't get auto-deselected just because the bounds haven't
+  // updated yet.
+  const userFiltered = useMemo(() => {
     let r = restaurants;
     if (filters.cuisine) {
       const c = filters.cuisine;
@@ -109,6 +114,13 @@ export function CityView({ city, restaurants }: Props) {
       const m = filters.minMentions;
       r = r.filter((x) => x.totalUniqueUsers >= m);
     }
+    return r;
+  }, [restaurants, filters]);
+
+  // Layer the search + viewport on top, then sort. Pagination happens in
+  // a separate memo so we can re-page without re-running the filter pass.
+  const filtered = useMemo(() => {
+    let r = userFiltered;
     const isSearching = searchQuery.trim().length > 0;
     if (isSearching) {
       const q = searchQuery.trim().toLowerCase();
@@ -130,7 +142,7 @@ export function CityView({ city, restaurants }: Props) {
       });
     }
     return [...r].sort(comparator(sortKey));
-  }, [restaurants, filters, sortKey, searchQuery, mapBounds]);
+  }, [userFiltered, sortKey, searchQuery, mapBounds]);
 
   // Chain collapse: when multiple restaurants in the visible set share the
   // same name (Corvus Coffee × 3, Pinche Tacos × 2), keep only the
@@ -173,15 +185,21 @@ export function CityView({ city, restaurants }: Props) {
     setPage(1);
   }, [filters, sortKey, searchQuery, mapBounds]);
 
-  // If filtering removed the currently-selected restaurant from the FULL
-  // filtered set (not just the current page), clear it. The selected pin
-  // is allowed to be off the current page — it'll re-highlight when the
-  // user paginates back to it.
+  // If a USER-driven filter (cuisine / neighborhood / vibe / score) excludes
+  // the currently-selected restaurant, clear the selection so we don't
+  // leave a stale highlight on a row that isn't visible.
+  //
+  // We deliberately check against `userFiltered`, NOT `filtered` — the
+  // latter also applies viewport bounds, and clicking a TagPick lead
+  // that's outside the current viewport would otherwise immediately
+  // deselect because the stale bounds don't include the new pick yet.
+  // (The flyTo expands the viewport on the next moveend; selection just
+  // needs to survive that brief in-between render.)
   useEffect(() => {
-    if (selectedId && !filtered.some((r) => r.id === selectedId)) {
+    if (selectedId && !userFiltered.some((r) => r.id === selectedId)) {
       setSelectedId(null);
     }
-  }, [filtered, selectedId]);
+  }, [userFiltered, selectedId]);
 
   // Search submit: if the user types something and presses enter, select
   // the top match. Match against the COLLAPSED set (one entry per chain
@@ -199,21 +217,57 @@ export function CityView({ city, restaurants }: Props) {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+    <div className="h-screen flex flex-col bg-paper">
+      <header className="border-b border-rule px-6 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-5 min-w-0">
+          <Link href="/" aria-label="Restaurants of Reddit — home" className="shrink-0">
+            <Image
+              src="/brand/RoR-logo-no-tagline.svg"
+              alt="Restaurants of Reddit"
+              width={180}
+              height={40}
+              priority
+              className="h-6 w-auto"
+            />
+          </Link>
+          <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 shrink-0">
+            <Link href="/" className="hover:text-ink transition-colors">
+              Cities
+            </Link>
+            <span className="text-rule-strong">/</span>
+            <span className="text-ink">{city.name}</span>
+          </nav>
+        </div>
+        <div className="flex items-center gap-4 shrink-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSearchSubmit();
+            }}
+            className="flex items-center"
+          >
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search restaurants…"
+              aria-label="Search restaurants"
+              className="font-mono text-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-3 border border-rule-strong bg-paper px-2.5 py-1.5 text-ink focus:outline-none focus:border-ink w-56"
+            />
+          </form>
+          <Link
+            href="/"
+            className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 hover:text-ink transition-colors"
+          >
             ← All cities
           </Link>
-          <h1 className="text-2xl font-bold">{city.name}</h1>
-          <span className="text-sm text-gray-500">{city.country}</span>
         </div>
       </header>
 
       <TagPicks
         restaurants={restaurants}
-        selectedTag={filters.tag}
-        onSelectTag={(t) => setFilters({ ...filters, tag: t })}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
       />
 
       <FilterBar
@@ -226,9 +280,7 @@ export function CityView({ city, restaurants }: Props) {
         availableTags={availableTags}
         totalCount={restaurants.length}
         filteredCount={collapsed.length}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onSearchSubmit={onSearchSubmit}
+        hasSearchQuery={searchQuery.length > 0}
         onClearFilters={() => {
           setFilters(EMPTY_FILTERS);
           setSearchQuery("");
@@ -244,6 +296,7 @@ export function CityView({ city, restaurants }: Props) {
           onPageChange={setPage}
           selectedId={selectedId}
           hoveredId={hoveredId}
+          onSelect={setSelectedId}
           onHover={setHoveredId}
           hideService={filters.hideService}
           topByTag={topByTag}
@@ -252,6 +305,7 @@ export function CityView({ city, restaurants }: Props) {
         <CityMap
           city={city}
           restaurants={visible}
+          allRestaurants={restaurants}
           selectedId={selectedId}
           hoveredId={hoveredId}
           onSelect={setSelectedId}

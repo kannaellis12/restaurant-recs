@@ -19,18 +19,17 @@ type Props = {
   availableTags: Tag[];
   totalCount: number;
   filteredCount: number;
-  searchQuery: string;
-  onSearchQueryChange: (q: string) => void;
-  /** Called when the user submits the search (Enter). Selects + flies to a match. */
-  onSearchSubmit: () => void;
+  /** True when the search input in the page header has any text. Drives the
+   *  "Clear" button visibility — search is cleared by the same button. */
+  hasSearchQuery: boolean;
   onClearFilters: () => void;
 };
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "rank", label: "Rank" },
-  { value: "food", label: "Food score" },
-  { value: "service", label: "Service score" },
-  { value: "volume", label: "Most reviewed" },
+  { value: "rank", label: "Sort: Rank" },
+  { value: "food", label: "Sort: Food score" },
+  { value: "service", label: "Sort: Service score" },
+  { value: "volume", label: "Sort: Most reviewed" },
 ];
 
 const SORT_OPTIONS_HIDE_SERVICE = SORT_OPTIONS.filter((o) => o.value !== "service");
@@ -55,201 +54,161 @@ export function FilterBar({
   availableTags,
   totalCount,
   filteredCount,
-  searchQuery,
-  onSearchQueryChange,
-  onSearchSubmit,
+  hasSearchQuery,
   onClearFilters,
 }: Props) {
-  const active = hasActiveFilters(filters) || searchQuery.length > 0;
+  const active = hasActiveFilters(filters) || hasSearchQuery;
   const sortOptions = filters.hideService ? SORT_OPTIONS_HIDE_SERVICE : SORT_OPTIONS;
 
+  // Single wrap-friendly row. Each select carries its field name as the
+  // placeholder/active option (e.g. "All cuisines", "Any price") so we
+  // don't need separate inline labels — that frees a lot of horizontal
+  // budget for small laptops where this used to spill onto two lines.
   return (
-    <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-2 flex gap-3 items-center flex-wrap text-sm">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSearchSubmit();
-        }}
-        className="flex items-center"
+    <div className="border-b border-rule px-6 py-2.5 bg-paper flex gap-2 items-center flex-wrap">
+      <select
+        value={sortKey}
+        onChange={(e) => onSortKeyChange(e.target.value as SortKey)}
+        className={selectClasses}
+        aria-label="Sort"
       >
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => onSearchQueryChange(e.target.value)}
-          placeholder="Search restaurants…"
-          aria-label="Search restaurants"
-          className="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
-        />
-      </form>
+        {sortOptions.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
 
-      <span className="text-gray-300 dark:text-gray-700">|</span>
+      <span className="text-rule-strong">·</span>
 
-      <Field label="Sort">
-        <select
-          value={sortKey}
-          onChange={(e) => onSortKeyChange(e.target.value as SortKey)}
-          className={selectClasses}
-        >
-          {sortOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <select
+        value={filters.cuisine ?? ""}
+        onChange={(e) => onFiltersChange({ ...filters, cuisine: e.target.value || null })}
+        className={selectClasses}
+        aria-label="Cuisine"
+      >
+        <option value="">All cuisines</option>
+        {availableCuisines.map((slug) => (
+          <option key={slug} value={slug}>
+            {CUISINES_BY_SLUG[slug]?.label ?? slug}
+          </option>
+        ))}
+      </select>
 
-      <span className="text-gray-300 dark:text-gray-700">|</span>
+      <select
+        value={filters.neighborhood ?? ""}
+        onChange={(e) => onFiltersChange({ ...filters, neighborhood: e.target.value || null })}
+        className={selectClasses}
+        aria-label="Neighborhood"
+      >
+        <option value="">All neighborhoods</option>
+        {availableNeighborhoods.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
 
-      <Field label="Cuisine">
-        <select
-          value={filters.cuisine ?? ""}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, cuisine: e.target.value || null })
-          }
-          className={selectClasses}
-        >
-          <option value="">All</option>
-          {availableCuisines.map((slug) => (
-            <option key={slug} value={slug}>
-              {CUISINES_BY_SLUG[slug]?.label ?? slug}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Neighborhood">
-        <select
-          value={filters.neighborhood ?? ""}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, neighborhood: e.target.value || null })
-          }
-          className={selectClasses}
-        >
-          <option value="">All</option>
-          {availableNeighborhoods.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Price">
-        <select
-          value={filters.priceLevel ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            onFiltersChange({
-              ...filters,
-              priceLevel: raw ? (Number(raw) as 1 | 2 | 3 | 4) : null,
-            });
-          }}
-          className={selectClasses}
-        >
-          <option value="">Any</option>
-          {PRICE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <select
+        value={filters.priceLevel ?? ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          onFiltersChange({
+            ...filters,
+            priceLevel: raw ? (Number(raw) as 1 | 2 | 3 | 4) : null,
+          });
+        }}
+        className={selectClasses}
+        aria-label="Price"
+      >
+        <option value="">Any price</option>
+        {PRICE_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
 
       {availableTags.length > 0 && (
-        <Field label="Vibe">
-          <select
-            value={filters.tag ?? ""}
-            onChange={(e) =>
-              onFiltersChange({
-                ...filters,
-                tag: (e.target.value || null) as Tag | null,
-              })
-            }
-            className={selectClasses}
-          >
-            <option value="">Any</option>
-            {availableTags.map((t) => (
-              <option key={t} value={t}>
-                {TAG_LABELS[t]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <select
+          value={filters.tag ?? ""}
+          onChange={(e) =>
+            onFiltersChange({ ...filters, tag: (e.target.value || null) as Tag | null })
+          }
+          className={selectClasses}
+          aria-label="Vibe"
+        >
+          <option value="">Any vibe</option>
+          {availableTags.map((t) => (
+            <option key={t} value={t}>
+              {TAG_LABELS[t]}
+            </option>
+          ))}
+        </select>
       )}
 
-      <Field label="Min food">
-        <select
-          value={filters.minFoodScore ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            onFiltersChange({
-              ...filters,
-              minFoodScore: raw ? Number(raw) : null,
-            });
-          }}
-          className={selectClasses}
-        >
-          <option value="">Any</option>
-          {MIN_SCORE_OPTIONS.map((v) => (
-            <option key={v} value={v}>
-              {v.toFixed(1)}+
-            </option>
-          ))}
-        </select>
-      </Field>
+      <select
+        value={filters.minFoodScore ?? ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          onFiltersChange({ ...filters, minFoodScore: raw ? Number(raw) : null });
+        }}
+        className={selectClasses}
+        aria-label="Minimum food score"
+      >
+        <option value="">Any food score</option>
+        {MIN_SCORE_OPTIONS.map((v) => (
+          <option key={v} value={v}>
+            {v.toFixed(1)}+
+          </option>
+        ))}
+      </select>
 
-      <Field label="Min reviewers">
-        <select
-          value={filters.minMentions ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            onFiltersChange({
-              ...filters,
-              minMentions: raw ? Number(raw) : null,
-            });
-          }}
-          className={selectClasses}
-        >
-          <option value="">Any</option>
-          {MIN_MENTIONS_OPTIONS.map((v) => (
-            <option key={v} value={v}>
-              {v}+
-            </option>
-          ))}
-        </select>
-      </Field>
+      <select
+        value={filters.minMentions ?? ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          onFiltersChange({ ...filters, minMentions: raw ? Number(raw) : null });
+        }}
+        className={selectClasses}
+        aria-label="Minimum reviewers"
+      >
+        <option value="">Any reviewers</option>
+        {MIN_MENTIONS_OPTIONS.map((v) => (
+          <option key={v} value={v}>
+            {v}+
+          </option>
+        ))}
+      </select>
 
-      <label className="flex items-center gap-2 cursor-pointer select-none">
+      <label className="flex items-center gap-1.5 cursor-pointer select-none font-mono text-mono-sm uppercase tracking-wider text-ink-2">
         <input
           type="checkbox"
           checked={filters.hideService}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, hideService: e.target.checked })
-          }
-          className="cursor-pointer"
+          onChange={(e) => onFiltersChange({ ...filters, hideService: e.target.checked })}
+          className="cursor-pointer accent-accent"
         />
-        <span className="text-gray-700 dark:text-gray-300">Hide service reviews</span>
+        <span>Hide service</span>
       </label>
 
       {active && (
         <button
+          type="button"
           onClick={onClearFilters}
-          className="text-blue-600 dark:text-blue-400 hover:underline"
+          className="font-mono text-mono-sm uppercase tracking-wider text-accent hover:text-accent-deep cursor-pointer"
         >
-          Clear filters
+          Clear
         </button>
       )}
 
-      <div className="ml-auto text-gray-500 dark:text-gray-400">
+      <div className="ml-auto font-mono text-mono-sm uppercase tracking-wider text-ink-3">
         {active ? (
           <span>
-            <span className="font-semibold">{filteredCount}</span> of {totalCount} restaurant
-            {totalCount === 1 ? "" : "s"}
+            <span className="text-ink font-semibold">{filteredCount}</span> of {totalCount}
           </span>
         ) : (
           <span>
-            <span className="font-semibold">{totalCount}</span> restaurant
-            {totalCount === 1 ? "" : "s"}
+            <span className="text-ink font-semibold">{totalCount}</span> restaurants
           </span>
         )}
       </div>
@@ -257,14 +216,9 @@ export function FilterBar({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex items-center gap-2">
-      <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-
+// Editorial select chrome: paper background, rule-strong border, ink text,
+// mono uppercase letter-spaced. cursor-pointer + active-state border swap so
+// it feels clickable. No leading inline label — the placeholder option ("All
+// cuisines", "Any price") doubles as the field's identity.
 const selectClasses =
-  "rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+  "font-mono text-mono uppercase tracking-wider border border-rule-strong bg-paper px-2 py-1 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink";

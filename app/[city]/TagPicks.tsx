@@ -10,18 +10,27 @@ import {
 
 type Props = {
   restaurants: RestaurantSummary[];
-  selectedTag: Tag | null;
-  onSelectTag: (t: Tag | null) => void;
+  /** Currently-selected restaurant id. Drives the active-state highlight on
+   *  whichever pick (if any) corresponds to the selection. */
+  selectedId: string | null;
+  /** Mirrors the row-click in RestaurantList: select-and-fly the map to the
+   *  picked restaurant. Clicking an already-active pick clears the
+   *  selection. We deliberately do NOT touch the tag filter here — the
+   *  FilterBar's Vibe dropdown owns that. */
+  onSelect: (id: string | null) => void;
 };
 
 /**
- * "Best for X" callouts. For each tag with ≥3 tagged restaurants in the city,
- * surface the top-ranked one (by city_rank, lowest = best). We render the
- * three most-used tags so we don't overflow the header on small viewports.
+ * "Best for X" shortcuts. For each tag with ≥3 tagged restaurants in the
+ * city, surface the highest-ranked one. We show the three most-used tags
+ * so we don't overflow the header on small viewports.
  *
- * Clicking a callout toggles the corresponding tag filter.
+ * Clicking a pick mirrors clicking that restaurant's row in the list:
+ * the map flies to the pin, the row highlights, and the restaurant name
+ * becomes a clickable link to the detail page. No filter side-effect —
+ * filters live in the FilterBar where the user expects them.
  */
-export function TagPicks({ restaurants, selectedTag, onSelectTag }: Props) {
+export function TagPicks({ restaurants, selectedId, onSelect }: Props) {
   const picks = useMemo(() => {
     type Pick = { tag: Tag; top: RestaurantSummary; n: number };
     const out: Pick[] = [];
@@ -37,25 +46,31 @@ export function TagPicks({ restaurants, selectedTag, onSelectTag }: Props) {
   if (picks.length === 0) return null;
 
   return (
-    <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex gap-2 overflow-x-auto">
+    <div className="border-b border-rule px-6 py-2 flex gap-4 overflow-x-auto bg-paper items-baseline">
+      <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 shrink-0">
+        ★ Top picks
+      </span>
       {picks.map(({ tag, top }) => {
-        const active = selectedTag === tag;
+        const active = selectedId === top.id;
         return (
           <button
             key={tag}
             type="button"
-            onClick={() => onSelectTag(active ? null : tag)}
+            onClick={() => onSelect(active ? null : top.id)}
             className={[
-              "shrink-0 text-left rounded-md border px-3 py-2 transition-colors",
+              "shrink-0 text-left transition-colors flex items-baseline gap-2 px-2 py-1 cursor-pointer",
               active
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
-                : "border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900",
+                ? "bg-accent-soft"
+                : "hover:bg-paper-2",
             ].join(" ")}
+            title={`Best for ${TAG_LABELS[tag].toLowerCase()} — locate ${top.name} on the map`}
           >
-            <div className="text-[10px] uppercase tracking-wide text-gray-500">
-              Best for {TAG_LABELS[tag].toLowerCase()}
-            </div>
-            <div className="text-sm font-semibold mt-0.5">{top.name}</div>
+            <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3">
+              {TAG_LABELS[tag]}
+            </span>
+            <span className="font-display text-base leading-none tracking-tight text-ink whitespace-nowrap">
+              {top.name}
+            </span>
           </button>
         );
       })}
