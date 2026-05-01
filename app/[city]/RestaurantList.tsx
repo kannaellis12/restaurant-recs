@@ -137,20 +137,25 @@ export function RestaurantList({
                     {/* Info column: name + meta + tags */}
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-3 flex-wrap">
-                        {isSelected ? (
-                          <Link
-                            href={`/${r.citySlug}/${r.placeId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-display font-medium text-h4 leading-[1.1] tracking-tight text-ink truncate underline decoration-accent decoration-1 underline-offset-[5px] hover:text-accent-deep transition-colors"
-                            title="View this restaurant's quotes and details"
-                          >
-                            {r.name} →
-                          </Link>
-                        ) : (
-                          <h3 className="font-display font-medium text-h4 leading-[1.1] tracking-tight text-ink truncate">
-                            {r.name}
-                          </h3>
-                        )}
+                        {/* The name is ALWAYS a Link to the detail page —
+                            no prior-selection gate. Row body is still
+                            clickable for fly-to-map (handled by the outer
+                            div's onClick); stopPropagation here keeps
+                            name-clicks from also triggering that. */}
+                        <Link
+                          href={`/${r.citySlug}/${r.placeId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className={[
+                            "font-display font-medium text-h4 leading-[1.1] tracking-tight truncate transition-colors",
+                            "underline decoration-1 underline-offset-[5px]",
+                            isSelected
+                              ? "text-accent-deep decoration-accent"
+                              : "text-ink decoration-rule hover:text-accent-deep hover:decoration-accent",
+                          ].join(" ")}
+                          title="View this restaurant's quotes and details"
+                        >
+                          {r.name}
+                        </Link>
                         {siblings > 0 && (
                           <span
                             className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 shrink-0"
@@ -261,48 +266,51 @@ function ScoreNumeral({
   count,
   accent = false,
 }: {
-  /** "Food" / "Service" — rendered in mono uppercase above the numeral. */
+  /** "Food" / "Service" — rendered inline before the mention count. */
   label: string;
   score: number | null;
   count: number;
   accent?: boolean;
 }) {
+  // Two-line layout: big serif numeral on top, "FOOD · 19 mentions" mono
+  // line underneath. The label rides with the count instead of taking its
+  // own line above the numeral — saves a line per score block, which is
+  // the difference between "breathable" and "crowded" in the half-width
+  // list panel. Color of the numeral (terracotta vs ink) carries the
+  // primary food/service distinction; the inline label is the backup.
+  if (score === null) {
+    return (
+      <div>
+        <div
+          className={[
+            "font-display font-medium leading-none tracking-tight",
+            accent ? "text-2xl" : "text-xl",
+            "text-ink-3",
+          ].join(" ")}
+        >
+          —
+        </div>
+        <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-1">
+          {label} <span className="text-rule-strong">·</span> no data
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
-      <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 leading-none">
-        {label}
+      <div
+        className={[
+          "font-display font-medium leading-none tracking-tight",
+          accent ? "text-2xl text-accent" : "text-xl text-ink",
+        ].join(" ")}
+      >
+        {(score * 10).toFixed(1)}
+        <span className="font-mono text-mono-sm text-ink-3 ml-0.5">/10</span>
       </div>
-      {score === null ? (
-        <>
-          <div
-            className={[
-              "font-display font-medium leading-none tracking-tight mt-1",
-              accent ? "text-2xl" : "text-xl",
-              "text-ink-3",
-            ].join(" ")}
-          >
-            —
-          </div>
-          <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-1">
-            no data
-          </div>
-        </>
-      ) : (
-        <>
-          <div
-            className={[
-              "font-display font-medium leading-none tracking-tight mt-1",
-              accent ? "text-2xl text-accent" : "text-xl text-ink",
-            ].join(" ")}
-          >
-            {(score * 10).toFixed(1)}
-            <span className="font-mono text-mono-sm text-ink-3 ml-0.5">/10</span>
-          </div>
-          <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-1">
-            {count} mention{count === 1 ? "" : "s"}
-          </div>
-        </>
-      )}
+      <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-1">
+        {label} <span className="text-rule-strong">·</span> {count} mention
+        {count === 1 ? "" : "s"}
+      </div>
     </div>
   );
 }

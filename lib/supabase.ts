@@ -47,4 +47,14 @@ export type RestaurantWithScoresRow = {
   /** Vibe/occasion tags from the restaurant_scores aggregation. */
   tags: string[];
   city_rank: number | null;
+  /** `regularOpeningHours` blob from Google Places. May be null when
+   *  Google has no hours data for the place. */
+  hours: {
+    weekdayDescriptions?: string[];
+    periods?: Array<{
+      open?: { day?: number; hour?: number; minute?: number };
+      close?: { day?: number; hour?: number; minute?: number };
+    }>;
+    openNow?: boolean;
+  } | null;
 };

@@ -30,6 +30,10 @@ from pipeline.models import PlaceCandidate, ResolveResult
 PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 
 # Field mask: only request fields we actually use. Cuts API cost.
+# `regularOpeningHours` falls in Google's Places "Atmosphere" SKU (more
+# expensive than the Basic SKU). The cost bump is small relative to our
+# query volume, and the hours show up on the restaurant detail page so
+# users don't have to leave the site to know if a place is open.
 FIELD_MASK = ",".join(
     [
         "places.id",
@@ -43,6 +47,7 @@ FIELD_MASK = ",".join(
         "places.types",
         "places.businessStatus",
         "places.addressComponents",
+        "places.regularOpeningHours",
     ]
 )
 
@@ -295,6 +300,7 @@ def _to_candidate(place: dict) -> PlaceCandidate:
         google_review_ct=place.get("userRatingCount"),
         business_status=place.get("businessStatus"),
         derived_neighborhood=neighborhood_from_components(place.get("addressComponents")),
+        hours=place.get("regularOpeningHours"),
     )
 
 

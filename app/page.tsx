@@ -27,7 +27,10 @@ export default function Home() {
           <span>{CITIES.length} cities</span>
         </div>
 
-        <h1 className="font-display text-h1 leading-[1.05] tracking-tight text-ink mb-6">
+        <h1
+          className="font-display leading-[1.05] tracking-tight text-ink mb-6"
+          style={{ fontSize: "clamp(36px, 5.5vw, 56px)" }}
+        >
           A field guide to{" "}
           <em className="text-accent not-italic font-display italic">good food</em>,
           {" "}from the self-proclaimed experts of Reddit.

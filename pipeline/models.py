@@ -62,6 +62,11 @@ class PlaceCandidate(BaseModel):
     # Derived from addressComponents — used as a fallback when no Reddit
     # comment mentioned a neighborhood for this restaurant.
     derived_neighborhood: Optional[str] = None
+    # Raw `regularOpeningHours` blob from the Google Places API. Stored
+    # as-is so we can pull either the pre-formatted `weekdayDescriptions`
+    # or the structured `periods`. None when Google has no hours data
+    # for the place (or we didn't request it).
+    hours: Optional[dict] = None
 
 
 class ResolveResult(BaseModel):

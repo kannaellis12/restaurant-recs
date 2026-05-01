@@ -29,6 +29,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 92,
     tags: [],
     cityRank: 1,
+    hoursLines: [],
   },
   {
     id: "mock-2",
@@ -48,6 +49,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 41,
     tags: [],
     cityRank: 2,
+    hoursLines: [],
   },
   {
     id: "mock-3",
@@ -67,6 +69,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 51,
     tags: [],
     cityRank: 3,
+    hoursLines: [],
   },
   {
     id: "mock-4",
@@ -86,6 +89,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 44,
     tags: [],
     cityRank: 4,
+    hoursLines: [],
   },
   {
     id: "mock-5",
@@ -105,6 +109,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 60,
     tags: [],
     cityRank: 5,
+    hoursLines: [],
   },
   {
     id: "mock-6",
@@ -124,6 +129,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 29,
     tags: [],
     cityRank: 6,
+    hoursLines: [],
   },
   {
     id: "mock-7",
@@ -143,6 +149,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 38,
     tags: [],
     cityRank: 7,
+    hoursLines: [],
   },
   {
     id: "mock-8",
@@ -162,6 +169,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 30,
     tags: [],
     cityRank: 8,
+    hoursLines: [],
   },
   {
     id: "mock-9",
@@ -181,6 +189,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 81,
     tags: [],
     cityRank: 9,
+    hoursLines: [],
   },
   {
     id: "mock-10",
@@ -200,6 +209,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
     totalUniqueUsers: 56,
     tags: [],
     cityRank: 10,
+    hoursLines: [],
   },
 ];
 

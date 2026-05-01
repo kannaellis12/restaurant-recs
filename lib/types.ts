@@ -34,6 +34,10 @@ export type RestaurantSummary = {
 
   /** 1-indexed rank within the city, recomputed each refresh */
   cityRank: number;
+
+  /** Pre-formatted "Monday: 9:00 AM – 10:00 PM" lines from Google Places.
+   *  Empty array when we don't have hours data for this restaurant. */
+  hoursLines: string[];
 };
 
 export const TAGS = [

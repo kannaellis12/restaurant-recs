@@ -35,13 +35,19 @@ export default async function AdminPage({
   // tabs at the top can show flag totals without loading the full payload
   // for every city. The expensive flag-with-context fetch only runs for
   // the actively-selected city.
-  const [flagCounts, flags, restaurantsByCity] = await Promise.all([
+  const [flagCounts, flags, restaurants] = await Promise.all([
     loadFlagCountsByCity(),
     cityFilter ? loadOpenFlags(cityFilter) : Promise.resolve([]),
-    loadRestaurantsByCity(),
+    // Same city scope as the flag queue. The unscoped fetch was hitting
+    // Supabase's 1000-row default and silently truncating mid-Denver.
+    loadRestaurantsForCity(cityFilter),
   ]);
 
-  const totalOpenFlags = Object.values(flagCounts).reduce((a, b) => a + b, 0);
+  const totalOpenFlags = Object.values(flagCounts).reduce<number>(
+    (a, b) => a + (b as number),
+    0,
+  );
+  const activeCity = cityFilter ? CITIES_BY_SLUG[cityFilter] : null;
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-8">
@@ -92,42 +98,45 @@ export default async function AdminPage({
           Edit any field on any restaurant — neighborhood, cuisines, price,
           website, or mark permanently closed. Useful when Google&apos;s data
           is wonky (Lasley, Barths, La Foret-the-restaurant-named-after-itself).
+          {" "}
+          Pick a city in the tabs above to load its list.
         </p>
-        {Object.entries(restaurantsByCity).map(([citySlug, restaurants]) => {
-          const city = CITIES_BY_SLUG[citySlug];
-          return (
-            <div key={citySlug} className="mb-8">
-              <div className="flex items-baseline justify-between mb-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                  {city?.name ?? citySlug} · {restaurants.length}
-                </h3>
-                <form action={recomputeScores}>
-                  <input type="hidden" name="citySlug" value={citySlug} />
-                  <button
-                    type="submit"
-                    className="text-xs border border-gray-300 dark:border-gray-700 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-900"
-                    title="Re-aggregate extractions into restaurant_scores. Use after dismissing/reassigning flags so /[city] reflects your changes."
-                  >
-                    Recompute scores
-                  </button>
-                </form>
-              </div>
-              <div className="grid grid-cols-[2fr_1.2fr_1.5fr_0.5fr_1.2fr_auto] gap-3 items-baseline pb-1 mb-1 border-b-2 border-gray-300 dark:border-gray-700 text-xs uppercase tracking-wide text-gray-500">
-                <div>Name</div>
-                <div>Neighborhood</div>
-                <div>Cuisines</div>
-                <div>Price</div>
-                <div>Website</div>
-                <div></div>
-              </div>
-              <div>
-                {restaurants.map((r) => (
-                  <RestaurantEditor key={r.id} restaurant={r} />
-                ))}
-              </div>
+        {!cityFilter || !activeCity ? (
+          <div className="text-sm text-gray-500 py-6">
+            Pick a city above to load its restaurant list.
+          </div>
+        ) : (
+          <div className="mb-8">
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                {activeCity.name} · {restaurants.length}
+              </h3>
+              <form action={recomputeScores}>
+                <input type="hidden" name="citySlug" value={cityFilter} />
+                <button
+                  type="submit"
+                  className="text-xs border border-gray-300 dark:border-gray-700 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  title="Re-aggregate extractions into restaurant_scores. Use after dismissing/reassigning flags so /[city] reflects your changes."
+                >
+                  Recompute scores
+                </button>
+              </form>
             </div>
-          );
-        })}
+            <div className="grid grid-cols-[2fr_1.2fr_1.5fr_0.5fr_1.2fr_auto] gap-3 items-baseline pb-1 mb-1 border-b-2 border-gray-300 dark:border-gray-700 text-xs uppercase tracking-wide text-gray-500">
+              <div>Name</div>
+              <div>Neighborhood</div>
+              <div>Cuisines</div>
+              <div>Price</div>
+              <div>Website</div>
+              <div></div>
+            </div>
+            <div>
+              {restaurants.map((r) => (
+                <RestaurantEditor key={r.id} restaurant={r} />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );
@@ -220,28 +229,37 @@ export type FlagWithContext = {
   sample_extraction?: SampleExtraction | null;
 };
 
-async function loadRestaurantsByCity(): Promise<Record<string, EditableRestaurant[]>> {
+/**
+ * Restaurants for one city, sorted alphabetically. Scoped to a single
+ * city because Supabase's default `.select()` row cap is 1000, and the
+ * unscoped query (≈1,400 rows when sorted globally by name) was getting
+ * silently truncated mid-Denver — the list was cutting off at restaurants
+ * starting with "N". A per-city fetch always sits well under the cap.
+ *
+ * Returns an empty array when the city slug is null (no city selected
+ * yet). That keeps the "pick a city" placeholder state cheap.
+ */
+async function loadRestaurantsForCity(
+  citySlug: string | null,
+): Promise<EditableRestaurant[]> {
+  if (!citySlug) return [];
   const supabase = adminClient();
   const { data, error } = await supabase
     .from("restaurants")
     .select("id, name, address, neighborhood, cuisines, price_level, website, city_slug")
     .eq("closed", false)
+    .eq("city_slug", citySlug)
     .order("name", { ascending: true });
   if (error) throw new Error(`Failed to load restaurants: ${error.message}`);
-  const byCity: Record<string, EditableRestaurant[]> = {};
-  for (const r of data ?? []) {
-    const slug = r.city_slug as string;
-    (byCity[slug] ??= []).push({
-      id: r.id as string,
-      name: r.name as string,
-      address: (r.address as string | null) ?? null,
-      neighborhood: (r.neighborhood as string | null) ?? null,
-      cuisines: (r.cuisines as string[] | null) ?? [],
-      price_level: (r.price_level as number | null) ?? null,
-      website: (r.website as string | null) ?? null,
-    });
-  }
-  return byCity;
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    address: (r.address as string | null) ?? null,
+    neighborhood: (r.neighborhood as string | null) ?? null,
+    cuisines: (r.cuisines as string[] | null) ?? [],
+    price_level: (r.price_level as number | null) ?? null,
+    website: (r.website as string | null) ?? null,
+  }));
 }
 
 /**

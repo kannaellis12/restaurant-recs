@@ -60,5 +60,7 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
     // city_rank can be null briefly between extraction and scoring — show
     // unranked rows at the bottom with a fallback rank value.
     cityRank: row.city_rank ?? 999,
+    // Hours aren't shown in the list — only the detail page reads them.
+    hoursLines: row.hours?.weekdayDescriptions ?? [],
   };
 }

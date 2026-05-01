@@ -173,6 +173,7 @@ def upsert_restaurant(
             "p_google_rating":    candidate.google_rating,
             "p_google_review_ct": candidate.google_review_ct,
             "p_cuisines":         cuisines or [],
+            "p_hours":            candidate.hours,
         },
     ).execute()
     # The function returns a uuid scalar. supabase-py wraps it as result.data.

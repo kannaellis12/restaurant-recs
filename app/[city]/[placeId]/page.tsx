@@ -179,5 +179,6 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
     serviceUniqueUsers: row.service_unique_users,
     totalUniqueUsers: row.total_unique_users,
     cityRank: row.city_rank ?? 999,
+    hoursLines: row.hours?.weekdayDescriptions ?? [],
   };
 }
