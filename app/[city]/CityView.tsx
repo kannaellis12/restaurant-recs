@@ -382,7 +382,21 @@ export function CityView({ city, restaurants }: Props) {
             siblingCountById={siblingCountById}
           />
         </div>
-        <div className={`${mobileView === "map" ? "contents" : "hidden"} md:contents`}>
+        {/* The map wrapper is a real block (not display:contents) so we
+            can apply overflow-hidden + min-h-0 to it. iOS Safari has
+            had subtle layout-sizing issues when grid items rely on
+            display:contents to participate, and Mapbox markers
+            propagate to absolute positions inside the map container —
+            without the explicit clip, markers projecting outside the
+            visible canvas leak into the paper background below the
+            map. The list wrapper above can stay on display:contents
+            because RestaurantList does its own internal scrolling. */}
+        <div
+          className={[
+            "min-h-0 overflow-hidden",
+            mobileView === "map" ? "" : "hidden md:block",
+          ].join(" ")}
+        >
           <CityMap
             city={city}
             restaurants={visible}

@@ -116,7 +116,21 @@ export function CityMap({
     map.on("moveend", emitBounds);
     map.on("movestart", onMovestart);
 
+    // iOS Safari changes the available viewport when the URL bar
+    // collapses / expands, and the mobile list-vs-map toggle flips
+    // the grid cell that hosts the map. Mapbox doesn't auto-measure
+    // on element resize (only on window.resize), so without this
+    // markers project to stale screen positions and end up rendering
+    // outside the visible canvas (pins floating below the map on a
+    // paper background). The observer kicks Mapbox to resize the
+    // canvas the moment the cell changes size.
+    const observer = new ResizeObserver(() => {
+      map.resize();
+    });
+    observer.observe(containerRef.current);
+
     return () => {
+      observer.disconnect();
       map.off("load", onLoad);
       map.off("moveend", emitBounds);
       map.off("movestart", onMovestart);
