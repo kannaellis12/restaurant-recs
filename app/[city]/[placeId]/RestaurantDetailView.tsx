@@ -41,9 +41,19 @@ type Props = {
   restaurant: RestaurantSummary;
   quotes: QuoteCard[];
   siblings: SiblingLocation[];
+  /** Number of ranked restaurants in the city — drives the "X / Y" denominator
+   *  on the rank stamp. Counted server-side and passed through so we don't
+   *  have to fetch a count from the client. */
+  totalRanked: number;
 };
 
-export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Props) {
+export function RestaurantDetailView({
+  city,
+  restaurant,
+  quotes,
+  siblings,
+  totalRanked,
+}: Props) {
   // Vibe filter: when set, both food and service quote sections narrow to
   // quotes carrying that tag. The filter strip lives near the top of the
   // page so it scopes both sections at once — the editorial intent is
@@ -92,10 +102,10 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
             <Image
               src="/brand/RoR-logo-no-tagline.svg"
               alt="Restaurants of Reddit"
-              width={180}
-              height={40}
+              width={220}
+              height={48}
               priority
-              className="h-6 w-auto"
+              className="h-8 w-auto"
             />
           </Link>
           <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 min-w-0">
@@ -121,13 +131,20 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
         </Link>
       </header>
 
-      <article className="max-w-5xl mx-auto px-8 py-12">
-        {/* Title block: vertical rank stamp on the left, meta + display name
-            + italic descriptor + action link on the right. */}
-        <div className="grid grid-cols-1 md:grid-cols-[112px_1fr] gap-8 mb-10">
-          <RankStamp rank={restaurant.cityRank} />
-
-          <div>
+      {/* Article container is now fully boxed (border on all four sides)
+          so each section's bottom rule terminates against a real edge
+          instead of trailing into white space. The article itself has no
+          padding — every direct child applies its own px-8 so internal
+          divider rules span the full boxed width. The bottom rule of the
+          last section is suppressed (`last:border-b-0`) so it doesn't
+          stack on the article's outer bottom border. */}
+      <article className="max-w-5xl mx-auto border-x border-t border-rule">
+        {/* Title block: title content fills the page on the left, rank
+            stamp anchored to the right with a thin vertical hairline
+            between them — same separator pattern as the FOOD/SERVICE
+            score columns below. */}
+        <div className="pl-9 pr-8 pt-12 pb-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start">
+          <div className="min-w-0">
             <MetaRow
               items={[
                 city.name,
@@ -144,9 +161,6 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
               <span className="text-accent">.</span>
             </h1>
 
-            {/* The italic descriptor under the name was just regurgitating
-                the cuisine + neighborhood already in the meta line above —
-                editorial flair without earning it. Dropped. */}
             {restaurant.address && (
               <p className="font-mono text-mono uppercase tracking-[0.04em] text-ink-3 mt-3">
                 {restaurant.address}
@@ -155,6 +169,8 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
 
             <ActionRow restaurant={restaurant} />
           </div>
+
+          <RankStamp rank={restaurant.cityRank} total={totalRanked} />
         </div>
 
         {/* Scores band — two huge serif numerals. Food sits in the accent
@@ -175,14 +191,53 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
           />
         </div>
 
+        {/* Section 01 — about: practical info first. Address, hours,
+            cuisines, price, website, plus the mini-map + vibe chips.
+            The whole section is a 2-column grid so the vertical rule
+            between the columns spans the FULL section height, touching
+            both the previous section's bottom border (the scores band's
+            bottom rule) and this section's own bottom border. The
+            heading and vibe tags both live inside the LEFT column so
+            their content lines up with the meta-list rows below. */}
+        <section className="border-b border-rule grid grid-cols-1 md:grid-cols-2">
+          <div className="md:border-r md:border-rule py-10">
+            <div className="px-8 font-mono text-mono-sm uppercase tracking-[0.08em] text-accent mb-6">
+              01 · The basics
+            </div>
+            <MetaList city={city} restaurant={restaurant} />
+            {restaurant.tags.length > 0 && (
+              <div className="px-8 mt-8">
+                <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 mb-2">
+                  Vibes
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {restaurant.tags.map((t) => (
+                    <Link
+                      key={t}
+                      href={`/${city.slug}?tag=${encodeURIComponent(t)}`}
+                      className="font-mono text-mono-sm uppercase tracking-[0.04em] px-2.5 py-1 rounded-full border border-accent bg-accent-soft text-accent-deep hover:bg-accent hover:text-paper transition-colors"
+                    >
+                      {TAG_LABELS[t]}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="aspect-[1.4/1] md:aspect-auto md:h-full overflow-hidden">
+            <RestaurantMiniMap restaurant={restaurant} />
+          </div>
+        </section>
+
         {/* Vibe filter — narrows both food and service sections to quotes
-            carrying the selected tag. We hide the whole strip when the
-            restaurant has no tagged quotes (the All button alone would be
-            useless). */}
+            carrying the selected tag. Lives right above the food section
+            (the next thing it affects), not floating between unrelated
+            sections. We hide the whole strip when the restaurant has no
+            tagged quotes (the All button alone would be useless). */}
         {availableTags.length > 0 && (
-          <div className="flex items-baseline gap-3 flex-wrap py-6 border-b border-rule">
+          <div className="flex items-baseline gap-3 flex-wrap px-8 py-6 border-b border-rule">
             <span className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 shrink-0">
-              Filter quotes
+              Filter mentions
             </span>
             <VibeChip
               active={vibeFilter === null}
@@ -202,8 +257,8 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
           </div>
         )}
 
-        {/* Section 01 — food quotes */}
-        <Section num="01" kicker="Food" heading="What people say.">
+        {/* Section 02 — food quotes */}
+        <Section num="02" heading="What people say about the food">
           {foodQuotes.length === 0 ? (
             <EmptySection
               text={
@@ -217,8 +272,10 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
           )}
         </Section>
 
-        {/* Section 02 — service quotes (smaller, secondary) */}
-        <Section num="02" kicker="Service" heading="The other conversation.">
+        {/* Section 03 — service quotes (smaller, secondary). Tonally
+            consistent with the homepage's "Karens of Google and Yelp"
+            voice — service complaints get a wink. */}
+        <Section num="03" heading="What the Karens say about the service">
           {serviceQuotes.length === 0 ? (
             <EmptySection
               text={
@@ -232,59 +289,65 @@ export function RestaurantDetailView({ city, restaurant, quotes, siblings }: Pro
           )}
         </Section>
 
-        {/* Section 03 — about: meta list + mini-map + tags */}
-        <Section num="03" kicker="About" heading="The basics.">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-            <MetaList city={city} restaurant={restaurant} />
-            <div className="aspect-[1.4/1] border border-rule overflow-hidden">
-              <RestaurantMiniMap restaurant={restaurant} />
-            </div>
-          </div>
-          {restaurant.tags.length > 0 && (
-            <div className="mt-8">
-              <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 mb-2">
-                Vibes
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {restaurant.tags.map((t) => (
-                  <Link
-                    key={t}
-                    href={`/${city.slug}?tag=${encodeURIComponent(t)}`}
-                    className="font-mono text-mono-sm uppercase tracking-[0.04em] px-2.5 py-1 rounded-full border border-accent bg-accent-soft text-accent-deep hover:bg-accent hover:text-paper transition-colors"
-                  >
-                    {TAG_LABELS[t]}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </Section>
-
         {siblings.length > 0 && (
-          <Section
-            num="04"
-            kicker="Locations"
-            heading={`Also as ${restaurant.name}.`}
-          >
+          <Section num="04" heading="Other locations">
             <SiblingsList city={city} siblings={siblings} />
           </Section>
         )}
+
       </article>
+
+      {/* Full-width bottom rule — closes off the article's bottom edge but
+          extends edge-to-edge across the screen so the page reads as a
+          single horizontal break before the footer. */}
+      <div className="border-t border-rule" />
+
+      {/* Editorial sign-off bookending the page header. Lives OUTSIDE the
+          max-width article so it spans the full page width — All-cities
+          left-aligns with the wordmark in the top nav, the glyph
+          right-aligns with the "Back to {city}" link, the wordmark sits
+          centered. Items are bottom-aligned to the glyph's baseline so
+          the row reads as a single bottom edge. */}
+      <footer className="px-6 pt-12 pb-6 grid grid-cols-1 md:grid-cols-3 gap-6 md:items-end">
+        <Link
+          href="/"
+          className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 hover:text-ink transition-colors text-center md:text-left"
+        >
+          ← All cities
+        </Link>
+        <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center order-first md:order-none">
+          Restaurants of Reddit
+        </p>
+        <div className="flex md:justify-end justify-center">
+          <Image
+            src="/brand/RoR-glyph.svg"
+            alt="Restaurants of Reddit"
+            width={80}
+            height={80}
+            className="h-20 w-auto"
+          />
+        </div>
+      </footer>
     </div>
   );
 }
 
 /* ---------- title block ------------------------------------------------- */
 
-function RankStamp({ rank }: { rank: number }) {
+function RankStamp({ rank, total }: { rank: number; total: number }) {
   if (!rank || rank >= 999) return null;
   return (
-    <div className="border-t border-ink pt-2 self-start">
+    <div className="md:pl-6 self-start text-right md:text-left min-w-[120px]">
       <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3">
         Rank
       </div>
-      <div className="font-display font-medium text-h1 leading-none tracking-[-0.04em] text-accent mt-1">
-        {String(rank).padStart(2, "0")}
+      <div className="font-display font-medium leading-none tracking-[-0.04em] text-accent mt-2 flex items-baseline gap-1.5 justify-end md:justify-start">
+        <span className="text-h1">{String(rank).padStart(2, "0")}</span>
+        {total > 0 && (
+          <span className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3">
+            / {total}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -305,10 +368,10 @@ function MetaRow({ items }: { items: (string | null)[] }) {
 }
 
 /**
- * The row of secondary actions under the descriptor: visit website, view
- * on Google Maps (which is also the "find a table" entry point — Google
- * shows the Reserve button on the place page when a reservation provider
- * is configured), and share.
+ * The row of secondary actions: visit website, get directions (deep-links
+ * to Google Maps; if Google has a reservation provider for the place,
+ * the user will see a Reserve button there too — but we don't promise
+ * that here, since most places don't), and share.
  */
 function ActionRow({ restaurant }: { restaurant: RestaurantSummary }) {
   const [shareCopied, setShareCopied] = useState(false);
@@ -348,7 +411,7 @@ function ActionRow({ restaurant }: { restaurant: RestaurantSummary }) {
         </ActionButton>
       )}
       <ActionButton href={googleMapsUrl} external>
-        Find a table ↗
+        Directions ↗
       </ActionButton>
       <ActionButton onClick={onShare}>
         {shareCopied ? "Link copied" : "Share"}
@@ -411,8 +474,10 @@ function ScoreColumn({
   return (
     <div
       className={[
-        "py-10 px-2 md:px-8",
-        borderLeft ? "md:border-l md:border-rule md:pl-12" : "",
+        "py-6 px-2 md:pr-6",
+        borderLeft
+          ? "md:border-l md:border-rule md:pl-11"
+          : "md:pl-9",
       ].join(" ")}
     >
       <div className="font-mono text-mono uppercase tracking-[0.08em] text-ink">
@@ -420,8 +485,8 @@ function ScoreColumn({
       </div>
       {score === null ? (
         <p
-          className="font-display italic font-normal leading-tight tracking-tight text-absent mt-4 max-w-md"
-          style={{ fontSize: "clamp(24px, 4vw, 36px)" }}
+          className="font-display italic font-normal leading-tight tracking-tight text-absent mt-2 max-w-md"
+          style={{ fontSize: "clamp(20px, 3vw, 28px)" }}
         >
           No one talked about it.
         </p>
@@ -429,17 +494,17 @@ function ScoreColumn({
         <>
           <div
             className={[
-              "font-display font-medium leading-[0.95] tracking-[-0.04em] mt-3",
+              "font-display font-medium leading-[0.95] tracking-[-0.04em] mt-2",
               accent ? "text-accent" : "text-ink",
             ].join(" ")}
-            style={{ fontSize: "clamp(48px, 6vw, 64px)" }}
+            style={{ fontSize: "clamp(36px, 4.5vw, 48px)" }}
           >
             {(score * 10).toFixed(1)}
-            <span className="font-mono text-ink-3 ml-2 tracking-[0.02em] text-mono">
+            <span className="font-mono text-ink-3 ml-1.5 tracking-[0.02em] text-mono-sm">
               /10
             </span>
           </div>
-          <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-3">
+          <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-2">
             <span className="text-ink font-medium">{mentions}</span> mention
             {mentions === 1 ? "" : "s"}
           </div>
@@ -453,24 +518,26 @@ function ScoreColumn({
 
 function Section({
   num,
-  kicker,
   heading,
   children,
 }: {
   num: string;
-  kicker: string;
+  /** The full section heading. Renders as `{num} · {heading}` in the mono
+   *  small font, accent-tinted. Replaces the old kicker + display-serif
+   *  heading combo — the page reads cleaner with one line per section
+   *  instead of two. */
   heading: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="py-10 border-b border-rule last:border-b-0">
-      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-5 items-baseline mb-6">
-        <span className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 border-t border-ink pt-3">
-          {num} · {kicker}
-        </span>
-        <h2 className="font-display font-medium text-h3 leading-[1.05] tracking-[-0.015em] text-ink">
-          {heading}
-        </h2>
+    // Padding lives on the section itself (not the outer article), so the
+    // border-b rule at the bottom of each section spans the full boxed
+    // article width and meets the article's left/right vertical rules
+    // cleanly. last:border-b-0 keeps the bottommost section from stacking
+    // a rule on top of the article's outer bottom border.
+    <section className="px-8 py-10 border-b border-rule last:border-b-0">
+      <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-accent mb-6">
+        {num} · {heading}
       </div>
       {children}
     </section>
@@ -523,7 +590,7 @@ function QuoteStack({
   return (
     <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-5 md:gap-8 items-start">
       <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3">
-        {quotes.length} {quotes.length === 1 ? "quote" : "quotes"}
+        {quotes.length} {quotes.length === 1 ? "mention" : "mentions"}
       </div>
       <div className="grid gap-8 max-w-3xl">
         {quotes.slice(0, 50).map((q) => (
@@ -562,7 +629,10 @@ function Quote({
     quote.quote_translated.trim() !== quote.quote.trim();
 
   return (
-    <div className="border-l border-ink pl-5 py-1 max-w-[64ch]">
+    // No more left rule — the sentiment + tag chips already mark a fresh
+    // quote start, and the rule was just adding visual noise next to
+    // every quote in the stack.
+    <div className="py-1 max-w-[64ch]">
       {/* Aspect chip + tag chips above the quote so the eye knows what
           flavor of sentiment it's about to read. */}
       {(sentiment || otherSentiment || quote.tags.length > 0) && (
@@ -730,11 +800,12 @@ function MetaList({
     rows.push({ dt: "Price", dd: "$".repeat(restaurant.priceLevel) });
   }
   if (restaurant.hoursLines.length > 0) {
+    const collapsed = collapseHours(restaurant.hoursLines);
     rows.push({
       dt: "Hours",
       dd: (
         <ul className="grid gap-0.5">
-          {restaurant.hoursLines.map((line, i) => (
+          {collapsed.map((line, i) => (
             <li key={i} className="font-body text-body text-ink leading-snug">
               {line}
             </li>
@@ -762,14 +833,23 @@ function MetaList({
   if (rows.length === 0) return null;
 
   return (
+    // The dl spans the full left column of section 01 (article edge to
+    // mid-section vertical rule). Each row's `border-t` therefore goes
+    // edge-to-edge across that left half, meeting the article's left
+    // border on one side and the mid-section vertical rule on the other.
+    // Content is indented via the row's own `pl-8 pr-6` so text doesn't
+    // sit flush against the article border. The first row gets no top
+    // rule — the section's own header bottom-margin already creates
+    // breathing space — but we keep the bottom rule on the last row so
+    // the dl closes off cleanly above the next section.
     <dl className="grid">
       {rows.map((row, i) => (
         <div
           key={i}
           className={[
-            "grid grid-cols-[120px_1fr] gap-4 items-baseline py-3",
-            "border-t border-rule",
-            i === rows.length - 1 ? "border-b" : "",
+            "grid grid-cols-[120px_1fr] gap-4 items-baseline py-3 pl-8 pr-6",
+            i > 0 ? "border-t border-rule" : "",
+            i === rows.length - 1 ? "border-b border-rule" : "",
           ].join(" ")}
         >
           <dt className="font-mono text-mono-sm uppercase tracking-[0.06em] text-ink-3 m-0">
@@ -834,4 +914,78 @@ function hostnameOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/**
+ * Collapse consecutive days that share the same hours into ranges:
+ *
+ *   ["Monday: 5:30 – 9:30 PM", "Tuesday: 5:30 – 9:30 PM",
+ *    "Wednesday: 5:30 – 9:30 PM", ..., "Saturday: 5:30 – 8:00 PM"]
+ *
+ * becomes
+ *
+ *   ["Mon – Fri: 5:30 – 9:30 PM", "Sat – Sun: 5:30 – 8:00 PM"]
+ *
+ * Robust to locale variation: we only collapse when the day prefix is
+ * recognized AND the hour string is identical. Any line we can't parse
+ * falls through verbatim so we never silently drop hours info.
+ *
+ * Google's `weekdayDescriptions` typically arrives Mon→Sun; we don't
+ * reorder, just collapse consecutive runs.
+ */
+const DAY_ABBR: Record<string, string> = {
+  Monday: "Mon",
+  Tuesday: "Tue",
+  Wednesday: "Wed",
+  Thursday: "Thu",
+  Friday: "Fri",
+  Saturday: "Sat",
+  Sunday: "Sun",
+};
+
+type ParsedDay = { day: string; hours: string };
+
+function parseDayLine(line: string): ParsedDay | null {
+  const idx = line.indexOf(":");
+  if (idx < 0) return null;
+  const day = line.slice(0, idx).trim();
+  const hours = line.slice(idx + 1).trim();
+  if (!DAY_ABBR[day]) return null;
+  return { day: DAY_ABBR[day], hours };
+}
+
+export function collapseHours(lines: string[]): string[] {
+  if (lines.length === 0) return [];
+  const out: string[] = [];
+
+  type Run = { start: string; end: string; hours: string };
+  let run: Run | null = null;
+
+  const flush = () => {
+    if (!run) return;
+    out.push(
+      run.start === run.end
+        ? `${run.start}: ${run.hours}`
+        : `${run.start} – ${run.end}: ${run.hours}`,
+    );
+    run = null;
+  };
+
+  for (const line of lines) {
+    const parsed = parseDayLine(line);
+    if (!parsed) {
+      // Unparseable line — flush the current run, emit verbatim, continue.
+      flush();
+      out.push(line);
+      continue;
+    }
+    if (run && run.hours === parsed.hours) {
+      run.end = parsed.day;
+    } else {
+      flush();
+      run = { start: parsed.day, end: parsed.day, hours: parsed.hours };
+    }
+  }
+  flush();
+  return out;
 }

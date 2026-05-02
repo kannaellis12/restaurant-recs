@@ -27,6 +27,17 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
 
   const restaurant = toSummary(restaurantRow as RestaurantWithScoresRow);
 
+  // Total ranked restaurants in the city — drives the "X / Y" denominator
+  // on the rank stamp. Cheap exact-count query; no rows shipped because
+  // we limit to 1 just to satisfy PostgREST.
+  const { count: rankedCount } = await supabase
+    .from("restaurants_with_scores")
+    .select("id", { count: "exact", head: true })
+    .eq("city_slug", citySlug)
+    .eq("closed", false)
+    .not("city_rank", "is", null);
+  const totalRanked = rankedCount ?? 0;
+
   // All extractions for this restaurant. We fetch the comment + parent
   // pointer + thread context here; the parent comment body itself comes
   // from a follow-up query because we have only the parent's reddit_id
@@ -156,6 +167,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
       restaurant={restaurant}
       quotes={quotes}
       siblings={siblings}
+      totalRanked={totalRanked}
     />
   );
 }

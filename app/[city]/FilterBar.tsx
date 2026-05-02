@@ -8,6 +8,7 @@ import {
   type SortKey,
   type Tag,
 } from "@/lib/types";
+import { MultiSelect } from "./MultiSelect";
 
 type Props = {
   sortKey: SortKey;
@@ -60,16 +61,12 @@ export function FilterBar({
   const active = hasActiveFilters(filters) || hasSearchQuery;
   const sortOptions = filters.hideService ? SORT_OPTIONS_HIDE_SERVICE : SORT_OPTIONS;
 
-  // Single wrap-friendly row. Each select carries its field name as the
-  // placeholder/active option (e.g. "All cuisines", "Any price") so we
-  // don't need separate inline labels — that frees a lot of horizontal
-  // budget for small laptops where this used to spill onto two lines.
   return (
     <div className="border-b border-rule px-6 py-2.5 bg-paper flex gap-2 items-center flex-wrap">
       <select
         value={sortKey}
         onChange={(e) => onSortKeyChange(e.target.value as SortKey)}
-        className={selectClasses}
+        className={`${selectClasses} max-w-[200px]`}
         aria-label="Sort"
       >
         {sortOptions.map((o) => (
@@ -81,70 +78,46 @@ export function FilterBar({
 
       <span className="text-rule-strong">·</span>
 
-      <select
-        value={filters.cuisine ?? ""}
-        onChange={(e) => onFiltersChange({ ...filters, cuisine: e.target.value || null })}
-        className={selectClasses}
-        aria-label="Cuisine"
-      >
-        <option value="">All cuisines</option>
-        {availableCuisines.map((slug) => (
-          <option key={slug} value={slug}>
-            {CUISINES_BY_SLUG[slug]?.label ?? slug}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Cuisine"
+        clearLabel="All cuisines"
+        options={availableCuisines.map((slug) => ({
+          value: slug,
+          label: CUISINES_BY_SLUG[slug]?.label ?? slug,
+        }))}
+        selected={filters.cuisines}
+        onChange={(next) => onFiltersChange({ ...filters, cuisines: next })}
+      />
 
-      <select
-        value={filters.neighborhood ?? ""}
-        onChange={(e) => onFiltersChange({ ...filters, neighborhood: e.target.value || null })}
-        className={selectClasses}
-        aria-label="Neighborhood"
-      >
-        <option value="">All neighborhoods</option>
-        {availableNeighborhoods.map((n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Neighborhood"
+        clearLabel="All neighborhoods"
+        options={availableNeighborhoods.map((n) => ({ value: n, label: n }))}
+        selected={filters.neighborhoods}
+        onChange={(next) => onFiltersChange({ ...filters, neighborhoods: next })}
+      />
 
-      <select
-        value={filters.priceLevel ?? ""}
-        onChange={(e) => {
-          const raw = e.target.value;
-          onFiltersChange({
-            ...filters,
-            priceLevel: raw ? (Number(raw) as 1 | 2 | 3 | 4) : null,
-          });
-        }}
-        className={selectClasses}
-        aria-label="Price"
-      >
-        <option value="">Any price</option>
-        {PRICE_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Price"
+        clearLabel="Any price"
+        options={PRICE_OPTIONS}
+        selected={filters.priceLevels}
+        onChange={(next) =>
+          onFiltersChange({ ...filters, priceLevels: next as Filters["priceLevels"] })
+        }
+        maxWidthClass="max-w-[140px]"
+      />
 
       {availableTags.length > 0 && (
-        <select
-          value={filters.tag ?? ""}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, tag: (e.target.value || null) as Tag | null })
+        <MultiSelect
+          label="Vibe"
+          clearLabel="Any vibe"
+          options={availableTags.map((t) => ({ value: t, label: TAG_LABELS[t] }))}
+          selected={filters.tags}
+          onChange={(next) =>
+            onFiltersChange({ ...filters, tags: next as Filters["tags"] })
           }
-          className={selectClasses}
-          aria-label="Vibe"
-        >
-          <option value="">Any vibe</option>
-          {availableTags.map((t) => (
-            <option key={t} value={t}>
-              {TAG_LABELS[t]}
-            </option>
-          ))}
-        </select>
+        />
       )}
 
       <select
@@ -153,10 +126,10 @@ export function FilterBar({
           const raw = e.target.value;
           onFiltersChange({ ...filters, minFoodScore: raw ? Number(raw) : null });
         }}
-        className={selectClasses}
-        aria-label="Minimum food score"
+        className={`${selectClasses} max-w-[180px]`}
+        aria-label="Minimum food rating"
       >
-        <option value="">Any food score</option>
+        <option value="">Food rating</option>
         {MIN_SCORE_OPTIONS.map((v) => (
           <option key={v} value={v}>
             {v.toFixed(1)}+
@@ -170,10 +143,10 @@ export function FilterBar({
           const raw = e.target.value;
           onFiltersChange({ ...filters, minMentions: raw ? Number(raw) : null });
         }}
-        className={selectClasses}
-        aria-label="Minimum reviewers"
+        className={`${selectClasses} max-w-[180px]`}
+        aria-label="Minimum mentions"
       >
-        <option value="">Any reviewers</option>
+        <option value=""># of mentions</option>
         {MIN_MENTIONS_OPTIONS.map((v) => (
           <option key={v} value={v}>
             {v}+
@@ -216,9 +189,5 @@ export function FilterBar({
   );
 }
 
-// Editorial select chrome: paper background, rule-strong border, ink text,
-// mono uppercase letter-spaced. cursor-pointer + active-state border swap so
-// it feels clickable. No leading inline label — the placeholder option ("All
-// cuisines", "Any price") doubles as the field's identity.
 const selectClasses =
-  "font-mono text-mono uppercase tracking-wider border border-rule-strong bg-paper px-2 py-1 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink";
+  "font-mono text-mono uppercase tracking-wider border border-rule-strong bg-paper px-2 py-1 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink truncate";

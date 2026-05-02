@@ -9,10 +9,10 @@ export default function Home() {
         <Image
           src="/brand/RoR-logo-no-tagline.svg"
           alt="Restaurants of Reddit"
-          width={240}
-          height={56}
+          width={300}
+          height={68}
           priority
-          className="h-8 w-auto"
+          className="h-10 w-auto"
         />
         <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3">
           v0.1 · Apr 2026
@@ -62,7 +62,31 @@ export default function Home() {
             </li>
           ))}
         </ul>
+
       </section>
+
+      {/* Sign-off footer mirrors the header bookend: tagline on the left
+          where the wordmark sits up top, wordmark centered, glyph on
+          the right where the version stamp sits up top. Spans full
+          page width so the bookends line up with the header. Items
+          bottom-align to the glyph's baseline. */}
+      <footer className="px-8 pt-16 pb-6 grid grid-cols-1 md:grid-cols-3 gap-6 md:items-end">
+        <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center md:text-left max-w-sm">
+          Mined from Reddit, served with a side of skepticism.
+        </p>
+        <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center order-first md:order-none">
+          Restaurants of Reddit
+        </p>
+        <div className="flex md:justify-end justify-center">
+          <Image
+            src="/brand/RoR-glyph.svg"
+            alt="Restaurants of Reddit"
+            width={80}
+            height={80}
+            className="h-20 w-auto"
+          />
+        </div>
+      </footer>
     </main>
   );
 }

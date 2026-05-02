@@ -35,14 +35,16 @@ export function CityView({ city, restaurants }: Props) {
   // After mount the filters live in local state — we don't keep them in sync
   // with the URL on subsequent changes.
   const [filters, setFilters] = useState<Filters>(() => {
-    const cuisine = searchParams.get("cuisine");
-    const tag = searchParams.get("tag");
-    const neighborhood = searchParams.get("neighborhood");
+    // Deep links from the detail page pass single comma-free values
+    // (e.g. /denver?cuisine=italian, ?tag=date_night). We still split on
+    // commas so a future link could pre-select multiple options.
+    const splitParam = (raw: string | null): string[] =>
+      raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
     return {
       ...EMPTY_FILTERS,
-      cuisine: cuisine || null,
-      neighborhood: neighborhood || null,
-      tag: (tag || null) as Filters["tag"],
+      cuisines: splitParam(searchParams.get("cuisine")),
+      neighborhoods: splitParam(searchParams.get("neighborhood")),
+      tags: splitParam(searchParams.get("tag")) as Filters["tags"],
     };
   });
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,19 +93,25 @@ export function CityView({ city, restaurants }: Props) {
   // updated yet.
   const userFiltered = useMemo(() => {
     let r = restaurants;
-    if (filters.cuisine) {
-      const c = filters.cuisine;
-      r = r.filter((x) => x.cuisines.includes(c));
+    // Multi-select filters use OR semantics within a category and AND
+    // across categories: e.g. selecting Italian + French shows
+    // restaurants in either cuisine, while also requiring the selected
+    // neighborhood / price / vibe.
+    if (filters.cuisines.length > 0) {
+      const set = new Set(filters.cuisines);
+      r = r.filter((x) => x.cuisines.some((c) => set.has(c)));
     }
-    if (filters.neighborhood) {
-      r = r.filter((x) => x.neighborhood === filters.neighborhood);
+    if (filters.neighborhoods.length > 0) {
+      const set = new Set(filters.neighborhoods);
+      r = r.filter((x) => x.neighborhood !== null && set.has(x.neighborhood));
     }
-    if (filters.priceLevel) {
-      r = r.filter((x) => x.priceLevel === filters.priceLevel);
+    if (filters.priceLevels.length > 0) {
+      const set = new Set<number>(filters.priceLevels);
+      r = r.filter((x) => x.priceLevel !== null && set.has(x.priceLevel));
     }
-    if (filters.tag) {
-      const t = filters.tag;
-      r = r.filter((x) => x.tags.includes(t));
+    if (filters.tags.length > 0) {
+      const set = new Set<string>(filters.tags);
+      r = r.filter((x) => x.tags.some((t) => set.has(t)));
     }
     if (filters.minFoodScore !== null) {
       // Score is stored on a 0–1 scale; the filter dropdown speaks 0–10.
@@ -224,10 +232,10 @@ export function CityView({ city, restaurants }: Props) {
             <Image
               src="/brand/RoR-logo-no-tagline.svg"
               alt="Restaurants of Reddit"
-              width={180}
-              height={40}
+              width={220}
+              height={48}
               priority
-              className="h-6 w-auto"
+              className="h-8 w-auto"
             />
           </Link>
           <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 shrink-0">

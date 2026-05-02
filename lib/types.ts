@@ -67,10 +67,10 @@ export const TAG_LABELS: Record<Tag, string> = {
 export type SortKey = "rank" | "food" | "service" | "volume" | "recent";
 
 export type Filters = {
-  cuisine: string | null;
-  neighborhood: string | null;
-  priceLevel: 1 | 2 | 3 | 4 | null;
-  tag: Tag | null;
+  cuisines: string[];
+  neighborhoods: string[];
+  priceLevels: (1 | 2 | 3 | 4)[];
+  tags: Tag[];
   /** Minimum food score on the 0–10 scale. Null = no minimum. */
   minFoodScore: number | null;
   /** Minimum total unique reviewers (food OR service). Null = no minimum. */
@@ -85,10 +85,10 @@ export type Filters = {
 };
 
 export const EMPTY_FILTERS: Filters = {
-  cuisine: null,
-  neighborhood: null,
-  priceLevel: null,
-  tag: null,
+  cuisines: [],
+  neighborhoods: [],
+  priceLevels: [],
+  tags: [],
   minFoodScore: null,
   minMentions: null,
   hideService: false,
@@ -96,10 +96,10 @@ export const EMPTY_FILTERS: Filters = {
 
 export function hasActiveFilters(f: Filters): boolean {
   return (
-    f.cuisine !== null ||
-    f.neighborhood !== null ||
-    f.priceLevel !== null ||
-    f.tag !== null ||
+    f.cuisines.length > 0 ||
+    f.neighborhoods.length > 0 ||
+    f.priceLevels.length > 0 ||
+    f.tags.length > 0 ||
     f.minFoodScore !== null ||
     f.minMentions !== null ||
     f.hideService
