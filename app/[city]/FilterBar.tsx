@@ -104,7 +104,7 @@ export function FilterBar({
         onClick={() => setMobileOpen((o) => !o)}
         aria-expanded={mobileOpen}
         className={[
-          "sm:hidden font-mono text-mono-sm uppercase tracking-wider border bg-paper pl-2 pr-1.5 py-0.5 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink inline-flex items-center gap-1.5",
+          "sm:hidden font-mono text-mono-sm uppercase tracking-wider border bg-paper pl-2 pr-1.5 h-7 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink inline-flex items-center gap-1.5",
           activeFilterCount > 0 ? "border-ink" : "border-rule-strong",
         ].join(" ")}
       >
@@ -244,5 +244,10 @@ export function FilterBar({
   );
 }
 
+// Shared height (h-7) on every bordered control in the bar — native
+// selects, the mobile Filters toggle, and MultiSelect triggers — so
+// the row reads as one consistent line. Without it, browsers' built-in
+// vertical padding on <select> renders ~2-4px taller than our custom
+// inline-flex buttons.
 const selectClasses =
-  "font-mono text-mono-sm uppercase tracking-wider border border-rule-strong bg-paper px-2 py-0.5 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink truncate";
+  "font-mono text-mono-sm uppercase tracking-wider border border-rule-strong bg-paper px-2 h-7 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink truncate";

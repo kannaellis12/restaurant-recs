@@ -13,6 +13,7 @@ import {
   type Tag,
 } from "@/lib/types";
 import { RestaurantMiniMap } from "./RestaurantMiniMap";
+import { CityRequest, RequestedCityBanner } from "../../CityRequest";
 
 export type QuoteCard = {
   id: string;
@@ -93,6 +94,7 @@ export function RestaurantDetailView({
 
   return (
     <div className="bg-paper min-h-screen">
+      <RequestedCityBanner />
       {/* Page header — same chrome as the city page so navigation feels
           continuous. Logo on the left, breadcrumb in mono uppercase, a
           dedicated "back to {city}" link on the right. */}
@@ -308,13 +310,21 @@ export function RestaurantDetailView({
           single horizontal break before the footer. */}
       <div className="border-t border-rule" />
 
+      {/* "Request a city" widget on the detail page sits between the
+          article and the editorial sign-off. Same widget as the
+          homepage and city-list footer — Mapbox-locked typeahead, one
+          submission per place_id per browser. */}
+      <div className="px-5 sm:px-6 pt-8 sm:pt-12 max-w-md mx-auto md:mx-0">
+        <CityRequest />
+      </div>
+
       {/* Editorial sign-off bookending the page header. Lives OUTSIDE the
           max-width article so it spans the full page width — All-cities
           left-aligns with the wordmark in the top nav, the glyph
           right-aligns with the "Back to {city}" link, the wordmark sits
           centered. Items are bottom-aligned to the glyph's baseline so
           the row reads as a single bottom edge. */}
-      <footer className="px-6 pt-12 pb-6 grid grid-cols-1 md:grid-cols-3 gap-6 md:items-end">
+      <footer className="px-5 sm:px-6 pt-8 sm:pt-12 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 md:items-end">
         <Link
           href="/"
           className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 hover:text-ink transition-colors text-center md:text-left"
@@ -330,7 +340,7 @@ export function RestaurantDetailView({
             alt="Restaurants of Reddit"
             width={80}
             height={80}
-            className="h-20 w-auto"
+            className="h-12 sm:h-20 w-auto"
           />
         </div>
       </footer>

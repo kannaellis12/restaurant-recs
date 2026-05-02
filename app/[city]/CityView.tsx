@@ -19,6 +19,7 @@ import { RestaurantList, CompactScore } from "./RestaurantList";
 import { CityMap, type MapBounds } from "./CityMap";
 import { FilterBar } from "./FilterBar";
 import { TagPicks } from "./TagPicks";
+import { RequestedCityBanner } from "../CityRequest";
 
 type Props = {
   city: City;
@@ -251,6 +252,7 @@ export function CityView({ city, restaurants }: Props) {
 
   return (
     <div className="h-screen flex flex-col bg-paper">
+      <RequestedCityBanner />
       {/* Mobile: two rows (brand+breadcrumb, then full-width search) so
           the wordmark and search don't fight for horizontal space.
           Desktop (sm+): single row, original layout. The "← All cities"

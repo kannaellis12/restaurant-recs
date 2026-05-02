@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { TAG_LABELS, type RestaurantSummary, type Tag } from "@/lib/types";
 import { CUISINES_BY_SLUG } from "@/lib/cuisines";
+import { CityRequest } from "../CityRequest";
 
 type Props = {
   restaurants: RestaurantSummary[];
@@ -266,6 +267,13 @@ export function RestaurantList({
           {totalPages > 1 && (
             <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
           )}
+          {/* Request-a-city footer for the list panel. Lives at the
+              very end of the scroll so it doesn't compete with the
+              actual results, but is the natural next step for a user
+              who scrolled the whole list and didn't find their place. */}
+          <div className="px-5 py-8 border-t border-rule">
+            <CityRequest />
+          </div>
         </>
       )}
     </div>

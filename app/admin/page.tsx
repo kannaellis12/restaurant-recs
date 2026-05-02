@@ -35,12 +35,13 @@ export default async function AdminPage({
   // tabs at the top can show flag totals without loading the full payload
   // for every city. The expensive flag-with-context fetch only runs for
   // the actively-selected city.
-  const [flagCounts, flags, restaurants] = await Promise.all([
+  const [flagCounts, flags, restaurants, cityRequests] = await Promise.all([
     loadFlagCountsByCity(),
     cityFilter ? loadOpenFlags(cityFilter) : Promise.resolve([]),
     // Same city scope as the flag queue. The unscoped fetch was hitting
     // Supabase's 1000-row default and silently truncating mid-Denver.
     loadRestaurantsForCity(cityFilter),
+    loadCityRequests(),
   ]);
 
   const totalOpenFlags = Object.values(flagCounts).reduce<number>(
@@ -135,6 +136,56 @@ export default async function AdminPage({
                 <RestaurantEditor key={r.id} restaurant={r} />
               ))}
             </div>
+          </div>
+        )}
+      </section>
+
+      <section className="mb-12">
+        <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-lg font-bold">City requests</h2>
+          <span className="text-sm text-gray-500">
+            {cityRequests.length} unique{" "}
+            {cityRequests.length === 1 ? "place" : "places"}
+            {cityRequests.length > 0 &&
+              ` · ${cityRequests.reduce((a, r) => a + r.count, 0)} total`}
+          </span>
+        </div>
+        {cityRequests.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6">
+            No requests yet.
+          </p>
+        ) : (
+          <div className="border border-gray-200 dark:border-gray-800 rounded">
+            <div className="grid grid-cols-[2fr_1fr_0.6fr_1fr] gap-3 items-baseline px-3 py-2 border-b border-gray-200 dark:border-gray-800 text-xs uppercase tracking-wide text-gray-500">
+              <div>Place</div>
+              <div>Region / Country</div>
+              <div>Requests</div>
+              <div>Most recent</div>
+            </div>
+            {cityRequests.map((r) => (
+              <div
+                key={r.place_id}
+                className="grid grid-cols-[2fr_1fr_0.6fr_1fr] gap-3 items-baseline px-3 py-2 border-b border-gray-100 dark:border-gray-900 last:border-b-0 text-sm"
+              >
+                <div>
+                  <div className="font-medium">{r.city}</div>
+                  <div className="text-xs text-gray-500 truncate" title={r.place_name}>
+                    {r.place_name}
+                  </div>
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">
+                  {[r.region, r.country].filter(Boolean).join(" / ") || "—"}
+                </div>
+                <div className="font-semibold">{r.count}</div>
+                <div className="text-gray-500 text-xs">
+                  {new Date(r.latest_at).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
@@ -239,6 +290,62 @@ export type FlagWithContext = {
  * Returns an empty array when the city slug is null (no city selected
  * yet). That keeps the "pick a city" placeholder state cheap.
  */
+/**
+ * Aggregated city-request queue. The form on the marketing surfaces
+ * writes one row per click; here we collapse those rows into a per
+ * place_id roll-up so the admin can see "Seattle (12 requests, last
+ * 2 days ago)" instead of a stream of identical entries.
+ *
+ * In-memory aggregation is fine for the volume we expect — single
+ * digits per day. If it ever balloons we can swap this for a SQL
+ * `group by` view without changing the page.
+ */
+type CityRequestRollup = {
+  place_id: string;
+  place_name: string;
+  city: string;
+  region: string | null;
+  country: string | null;
+  count: number;
+  latest_at: string;
+};
+
+async function loadCityRequests(): Promise<CityRequestRollup[]> {
+  const supabase = adminClient();
+  const { data, error } = await supabase
+    .from("city_requests")
+    .select("place_id, place_name, city, region, country, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Failed to load city requests: ${error.message}`);
+
+  const byPlace = new Map<string, CityRequestRollup>();
+  for (const row of (data ?? []) as Array<{
+    place_id: string;
+    place_name: string;
+    city: string;
+    region: string | null;
+    country: string | null;
+    created_at: string;
+  }>) {
+    const existing = byPlace.get(row.place_id);
+    if (existing) {
+      existing.count += 1;
+      // Rows came in DESC, so the first hit is already the latest.
+    } else {
+      byPlace.set(row.place_id, {
+        place_id: row.place_id,
+        place_name: row.place_name,
+        city: row.city,
+        region: row.region,
+        country: row.country,
+        count: 1,
+        latest_at: row.created_at,
+      });
+    }
+  }
+  return [...byPlace.values()].sort((a, b) => b.count - a.count);
+}
+
 async function loadRestaurantsForCity(
   citySlug: string | null,
 ): Promise<EditableRestaurant[]> {
