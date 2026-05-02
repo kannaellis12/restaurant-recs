@@ -46,34 +46,41 @@ export function TagPicks({ restaurants, selectedId, onSelect }: Props) {
   if (picks.length === 0) return null;
 
   return (
-    <div className="border-b border-rule px-6 py-2 flex gap-4 overflow-x-auto bg-paper items-baseline">
-      <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 shrink-0">
-        ★ Top picks
-      </span>
-      {picks.map(({ tag, top }) => {
-        const active = selectedId === top.id;
-        return (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => onSelect(active ? null : top.id)}
-            className={[
-              "shrink-0 text-left transition-colors flex items-baseline gap-2 px-2 py-1 cursor-pointer",
-              active
-                ? "bg-accent-soft"
-                : "hover:bg-paper-2",
-            ].join(" ")}
-            title={`Best for ${TAG_LABELS[tag].toLowerCase()} — locate ${top.name} on the map`}
-          >
-            <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3">
-              {TAG_LABELS[tag]}
-            </span>
-            <span className="font-display text-base leading-none tracking-tight text-ink whitespace-nowrap">
-              {top.name}
-            </span>
-          </button>
-        );
-      })}
+    <div className="relative border-b border-rule bg-paper">
+      <div className="px-4 sm:px-6 py-2 flex gap-4 overflow-x-auto items-baseline">
+        <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 shrink-0">
+          ★ Top picks
+        </span>
+        {picks.map(({ tag, top }) => {
+          const active = selectedId === top.id;
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => onSelect(active ? null : top.id)}
+              className={[
+                "shrink-0 text-left transition-colors flex items-baseline gap-2 px-2 py-1 cursor-pointer",
+                active ? "bg-accent-soft" : "hover:bg-paper-2",
+              ].join(" ")}
+              title={`Best for ${TAG_LABELS[tag].toLowerCase()} — locate ${top.name} on the map`}
+            >
+              <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3">
+                {TAG_LABELS[tag]}
+              </span>
+              <span className="font-display text-base leading-none tracking-tight text-ink whitespace-nowrap">
+                {top.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {/* Right-edge fade signals horizontal scroll on mobile, where the
+          scrollbar itself is invisible (iOS) and a half-clipped pick name
+          isn't an obvious affordance. Hidden on sm+ where the row fits. */}
+      <div
+        aria-hidden="true"
+        className="sm:hidden absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-paper to-transparent pointer-events-none"
+      />
     </div>
   );
 }

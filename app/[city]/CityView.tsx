@@ -13,7 +13,9 @@ import {
   type SortKey,
   type Tag,
 } from "@/lib/types";
-import { RestaurantList } from "./RestaurantList";
+import { CUISINES_BY_SLUG } from "@/lib/cuisines";
+import { TAG_LABELS } from "@/lib/types";
+import { RestaurantList, CompactScore } from "./RestaurantList";
 import { CityMap, type MapBounds } from "./CityMap";
 import { FilterBar } from "./FilterBar";
 import { TagPicks } from "./TagPicks";
@@ -50,6 +52,26 @@ export function CityView({ city, restaurants }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [page, setPage] = useState(1);
+  // Mobile-only: which of the two stacked panes (list / map) is showing.
+  // On md+ both render side-by-side and this state is ignored. Default
+  // to "list" because that's where the user reads the answer to "what
+  // are the best restaurants?" — the map is the secondary "where" view.
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  // Tracks whether the layout is in side-by-side mode (md+). Drives the
+  // viewport filter below: panning the map only narrows the list when
+  // the list and map are visible together. On mobile the user toggles
+  // between them, so a stale map viewport shouldn't constrain a list
+  // they're now reading on its own. Default true to match SSR (desktop
+  // is the more common starting assumption for the Tailwind md+ class
+  // mirror in the layout) — useEffect corrects on mount.
+  const [isDesktopLayout, setIsDesktopLayout] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktopLayout(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsDesktopLayout(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const availableCuisines = useMemo(() => {
     const s = new Set<string>();
@@ -138,7 +160,10 @@ export function CityView({ city, restaurants }: Props) {
     // intentional lookup, not a "what's near me" browse, so we shouldn't
     // hide a match just because it's off-screen. Once the user picks a
     // result the map will fly to it and the viewport filter resumes.
-    if (mapBounds && !isSearching) {
+    // It's also suppressed on mobile, where the user toggles between
+    // list and map and a stale viewport from the last map session
+    // shouldn't constrain a list they're now reading on its own.
+    if (mapBounds && !isSearching && isDesktopLayout) {
       r = r.filter((x) => {
         const [lng, lat] = x.location;
         return (
@@ -150,7 +175,7 @@ export function CityView({ city, restaurants }: Props) {
       });
     }
     return [...r].sort(comparator(sortKey));
-  }, [userFiltered, sortKey, searchQuery, mapBounds]);
+  }, [userFiltered, sortKey, searchQuery, mapBounds, isDesktopLayout]);
 
   // Chain collapse: when multiple restaurants in the visible set share the
   // same name (Corvus Coffee × 3, Pinche Tacos × 2), keep only the
@@ -226,8 +251,13 @@ export function CityView({ city, restaurants }: Props) {
 
   return (
     <div className="h-screen flex flex-col bg-paper">
-      <header className="border-b border-rule px-6 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-5 min-w-0">
+      {/* Mobile: two rows (brand+breadcrumb, then full-width search) so
+          the wordmark and search don't fight for horizontal space.
+          Desktop (sm+): single row, original layout. The "← All cities"
+          link is suppressed on mobile because the Cities crumb already
+          links there — keeping it would just pad the row. */}
+      <header className="border-b border-rule px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
           <Link href="/" aria-label="Restaurants of Reddit — home" className="shrink-0">
             <Image
               src="/brand/RoR-logo-no-tagline.svg"
@@ -235,24 +265,24 @@ export function CityView({ city, restaurants }: Props) {
               width={220}
               height={48}
               priority
-              className="h-8 w-auto"
+              className="h-7 sm:h-8 w-auto"
             />
           </Link>
-          <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 shrink-0">
-            <Link href="/" className="hover:text-ink transition-colors">
+          <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 min-w-0">
+            <Link href="/" className="hover:text-ink transition-colors shrink-0">
               Cities
             </Link>
-            <span className="text-rule-strong">/</span>
-            <span className="text-ink">{city.name}</span>
+            <span className="text-rule-strong shrink-0">/</span>
+            <span className="text-ink truncate">{city.name}</span>
           </nav>
         </div>
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               onSearchSubmit();
             }}
-            className="flex items-center"
+            className="flex items-center flex-1 sm:flex-none"
           >
             <input
               type="search"
@@ -260,12 +290,12 @@ export function CityView({ city, restaurants }: Props) {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search restaurants…"
               aria-label="Search restaurants"
-              className="font-mono text-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-3 border border-rule-strong bg-paper px-2.5 py-1.5 text-ink focus:outline-none focus:border-ink w-56"
+              className="font-mono text-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal placeholder:text-ink-3 border border-rule-strong bg-paper px-2.5 py-1.5 text-ink focus:outline-none focus:border-ink w-full sm:w-56"
             />
           </form>
           <Link
             href="/"
-            className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 hover:text-ink transition-colors"
+            className="hidden sm:inline font-mono text-mono-sm uppercase tracking-wider text-ink-3 hover:text-ink transition-colors"
           >
             ← All cities
           </Link>
@@ -295,31 +325,158 @@ export function CityView({ city, restaurants }: Props) {
         }}
       />
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-        <RestaurantList
-          restaurants={visible}
-          totalInView={collapsed.length}
-          page={safePage}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          selectedId={selectedId}
-          hoveredId={hoveredId}
-          onSelect={setSelectedId}
-          onHover={setHoveredId}
-          hideService={filters.hideService}
-          topByTag={topByTag}
-          siblingCountById={siblingCountById}
-        />
-        <CityMap
-          city={city}
-          restaurants={visible}
-          allRestaurants={restaurants}
-          selectedId={selectedId}
-          hoveredId={hoveredId}
-          onSelect={setSelectedId}
-          onBoundsChange={setMapBounds}
-        />
+      {/* Mobile-only view toggle. md+ keeps the side-by-side layout so
+          this strip never renders. Active tab uses an ink underline;
+          inactive sits on the rule color so the two borders form one
+          continuous baseline. */}
+      <div className="md:hidden bg-paper grid grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setMobileView("list")}
+          aria-pressed={mobileView === "list"}
+          className={[
+            "font-mono text-mono-sm uppercase tracking-wider py-1.5 cursor-pointer transition-colors border-b-2",
+            mobileView === "list"
+              ? "text-ink border-ink"
+              : "text-ink-3 hover:text-ink border-rule",
+          ].join(" ")}
+        >
+          List
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("map")}
+          aria-pressed={mobileView === "map"}
+          className={[
+            "font-mono text-mono-sm uppercase tracking-wider py-1.5 cursor-pointer transition-colors border-b-2",
+            mobileView === "map"
+              ? "text-ink border-ink"
+              : "text-ink-3 hover:text-ink border-rule",
+          ].join(" ")}
+        >
+          Map
+        </button>
       </div>
+
+      {/* List + map. Mobile: one column, one row sized to 1fr so the
+          visible pane fills the available viewport. Desktop: two
+          columns side-by-side, default auto rows. The wrapping divs
+          use `display: contents` so they don't add a layout layer to
+          the grid — they only exist to flip visibility per mobile tab. */}
+      <div className="flex-1 grid grid-cols-1 grid-rows-1 md:grid-cols-2 md:grid-rows-none overflow-hidden">
+        <div className={`${mobileView === "list" ? "contents" : "hidden"} md:contents`}>
+          <RestaurantList
+            restaurants={visible}
+            totalInView={collapsed.length}
+            page={safePage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            selectedId={selectedId}
+            hoveredId={hoveredId}
+            onSelect={setSelectedId}
+            onHover={setHoveredId}
+            hideService={filters.hideService}
+            topByTag={topByTag}
+            siblingCountById={siblingCountById}
+          />
+        </div>
+        <div className={`${mobileView === "map" ? "contents" : "hidden"} md:contents`}>
+          <CityMap
+            city={city}
+            restaurants={visible}
+            allRestaurants={restaurants}
+            selectedId={selectedId}
+            hoveredId={hoveredId}
+            onSelect={setSelectedId}
+            onBoundsChange={setMapBounds}
+            // On mobile, panning or zooming the map should dismiss the
+            // pin-preview card the same way Airbnb's mobile map does.
+            // Desktop has the list visible alongside, so a sticky
+            // selection there is fine and we don't pass the callback.
+            onUserInteractStart={
+              isDesktopLayout ? undefined : () => setSelectedId(null)
+            }
+          />
+        </div>
+      </div>
+
+      {/* Mobile pin-preview card. Tapping a marker in map view selects
+          a restaurant and surfaces this card over the bottom of the
+          viewport — same pattern Airbnb uses. Tap the card to view
+          details, tap × to dismiss, or pan/zoom the map (handled by
+          CityMap's onUserInteractStart) to dismiss implicitly. */}
+      {!isDesktopLayout && mobileView === "map" && selectedId && (() => {
+        const r = restaurants.find((x) => x.id === selectedId);
+        if (!r) return null;
+        const cuisineLabel = r.cuisines
+          .map((c) => CUISINES_BY_SLUG[c]?.label ?? c)
+          .join(" / ");
+        const metaItems = [
+          r.neighborhood,
+          cuisineLabel || null,
+          r.priceLevel ? "$".repeat(r.priceLevel) : null,
+        ].filter((x): x is string => Boolean(x));
+        return (
+          <div className="md:hidden fixed bottom-3 left-3 right-3 z-30">
+            <Link
+              href={`/${r.citySlug}/${r.placeId}`}
+              className="block bg-paper border border-rule shadow-lg pl-5 pr-12 py-4 hover:bg-paper-2 transition-colors"
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-mono-sm uppercase tracking-wider text-accent shrink-0">
+                  {String(r.cityRank).padStart(2, "0")}
+                </span>
+                <h3 className="font-display font-medium text-h4 leading-tight tracking-tight text-ink truncate">
+                  {r.name}
+                </h3>
+              </div>
+              {metaItems.length > 0 && (
+                <div className="mt-1 font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_92%,transparent_100%)]">
+                  {metaItems.join(" · ")}
+                </div>
+              )}
+              {r.tags.length > 0 && (
+                <div className="mt-2 flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_92%,transparent_100%)]">
+                  {r.tags.map((t) => (
+                    <span
+                      key={t}
+                      className="font-mono text-mono-sm uppercase tracking-[0.06em] whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full border border-rule-strong text-ink-2"
+                    >
+                      {TAG_LABELS[t]}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex items-baseline gap-x-2 font-mono text-mono-sm uppercase tracking-wider">
+                <CompactScore
+                  label="Food"
+                  score={r.foodScore}
+                  count={r.foodUniqueUsers}
+                  accent
+                />
+                {!filters.hideService && (
+                  <>
+                    <span className="text-rule-strong">·</span>
+                    <CompactScore
+                      label="Service"
+                      score={r.serviceScore}
+                      count={r.serviceUniqueUsers}
+                    />
+                  </>
+                )}
+              </div>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              aria-label="Close preview"
+              className="absolute top-2 right-2 p-1.5 text-ink-3 hover:text-ink cursor-pointer text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 }

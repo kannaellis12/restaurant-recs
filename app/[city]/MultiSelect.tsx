@@ -81,7 +81,7 @@ export function MultiSelect<T extends string | number>({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={[
-          "font-mono text-mono uppercase tracking-wider border bg-paper pl-2 pr-1.5 py-1 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink inline-flex items-center gap-1.5",
+          "font-mono text-mono-sm uppercase tracking-wider border bg-paper pl-2 pr-1.5 py-0.5 text-ink cursor-pointer hover:border-ink focus:outline-none focus:border-ink inline-flex items-center gap-1.5",
           selected.length > 0 ? "border-ink" : "border-rule-strong",
           maxWidthClass,
         ].join(" ")}

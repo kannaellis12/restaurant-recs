@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { City } from "@/lib/cities";
@@ -96,8 +96,14 @@ export function RestaurantDetailView({
       {/* Page header — same chrome as the city page so navigation feels
           continuous. Logo on the left, breadcrumb in mono uppercase, a
           dedicated "back to {city}" link on the right. */}
-      <header className="border-b border-rule px-6 py-3 flex items-center justify-between gap-4 sticky top-0 bg-paper/95 backdrop-blur z-10">
-        <div className="flex items-center gap-5 min-w-0">
+      {/* On mobile we hide the dedicated "Back to {city}" link since the
+          breadcrumb's city crumb already links to the same place; that
+          frees the row of overlap pressure between logo and back link
+          (same fix we made on the city page header). The breadcrumb
+          itself drops the "Cities" parent crumb on mobile to keep the
+          row compact — a tap on the wordmark already covers "go home". */}
+      <header className="border-b border-rule px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 sticky top-0 bg-paper/95 backdrop-blur z-10">
+        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
           <Link href="/" aria-label="Restaurants of Reddit — home" className="shrink-0">
             <Image
               src="/brand/RoR-logo-no-tagline.svg"
@@ -105,14 +111,14 @@ export function RestaurantDetailView({
               width={220}
               height={48}
               priority
-              className="h-8 w-auto"
+              className="h-7 sm:h-8 w-auto"
             />
           </Link>
           <nav className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 flex items-baseline gap-2 min-w-0">
-            <Link href="/" className="hover:text-ink transition-colors shrink-0">
+            <Link href="/" className="hidden sm:inline hover:text-ink transition-colors shrink-0">
               Cities
             </Link>
-            <span className="text-rule-strong shrink-0">/</span>
+            <span className="hidden sm:inline text-rule-strong shrink-0">/</span>
             <Link
               href={`/${city.slug}`}
               className="hover:text-ink transition-colors shrink-0"
@@ -125,7 +131,7 @@ export function RestaurantDetailView({
         </div>
         <Link
           href={`/${city.slug}`}
-          className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 hover:text-ink transition-colors shrink-0"
+          className="hidden sm:inline font-mono text-mono-sm uppercase tracking-wider text-ink-3 hover:text-ink transition-colors shrink-0"
         >
           ← Back to {city.name}
         </Link>
@@ -138,12 +144,12 @@ export function RestaurantDetailView({
           divider rules span the full boxed width. The bottom rule of the
           last section is suppressed (`last:border-b-0`) so it doesn't
           stack on the article's outer bottom border. */}
-      <article className="max-w-5xl mx-auto border-x border-t border-rule">
+      <article className="max-w-5xl mx-auto md:border-x md:border-t md:border-rule">
         {/* Title block: title content fills the page on the left, rank
             stamp anchored to the right with a thin vertical hairline
             between them — same separator pattern as the FOOD/SERVICE
             score columns below. */}
-        <div className="pl-9 pr-8 pt-12 pb-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start">
+        <div className="px-5 sm:pl-9 sm:pr-8 pt-8 pb-8 sm:pt-12 sm:pb-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="min-w-0">
             <MetaRow
               items={[
@@ -200,13 +206,13 @@ export function RestaurantDetailView({
             heading and vibe tags both live inside the LEFT column so
             their content lines up with the meta-list rows below. */}
         <section className="border-b border-rule grid grid-cols-1 md:grid-cols-2">
-          <div className="md:border-r md:border-rule py-10">
-            <div className="px-8 font-mono text-mono-sm uppercase tracking-[0.08em] text-accent mb-6">
+          <div className="md:border-r md:border-rule pt-8 pb-0 sm:py-10">
+            <div className="px-5 sm:px-8 font-mono text-[11px] tracking-wider sm:text-mono-sm sm:tracking-[0.08em] uppercase text-accent mb-6">
               01 · The basics
             </div>
             <MetaList city={city} restaurant={restaurant} />
             {restaurant.tags.length > 0 && (
-              <div className="px-8 mt-8">
+              <div className="px-5 sm:px-8 mt-8">
                 <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 mb-2">
                   Vibes
                 </div>
@@ -224,7 +230,7 @@ export function RestaurantDetailView({
               </div>
             )}
           </div>
-          <div className="aspect-[1.4/1] md:aspect-auto md:h-full overflow-hidden">
+          <div className="w-full aspect-square md:aspect-auto md:h-full overflow-hidden">
             <RestaurantMiniMap restaurant={restaurant} />
           </div>
         </section>
@@ -235,7 +241,7 @@ export function RestaurantDetailView({
             sections. We hide the whole strip when the restaurant has no
             tagged quotes (the All button alone would be useless). */}
         {availableTags.length > 0 && (
-          <div className="flex items-baseline gap-3 flex-wrap px-8 py-6 border-b border-rule">
+          <div className="flex items-baseline gap-3 flex-wrap px-5 sm:px-8 py-4 sm:py-6 border-b border-rule">
             <span className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 shrink-0">
               Filter mentions
             </span>
@@ -337,11 +343,11 @@ export function RestaurantDetailView({
 function RankStamp({ rank, total }: { rank: number; total: number }) {
   if (!rank || rank >= 999) return null;
   return (
-    <div className="md:pl-6 self-start text-right md:text-left min-w-[120px]">
+    <div className="md:pl-6 self-start text-left min-w-[120px]">
       <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3">
         Rank
       </div>
-      <div className="font-display font-medium leading-none tracking-[-0.04em] text-accent mt-2 flex items-baseline gap-1.5 justify-end md:justify-start">
+      <div className="font-display font-medium leading-none tracking-[-0.04em] text-accent mt-2 flex items-baseline gap-1.5 justify-start">
         <span className="text-h1">{String(rank).padStart(2, "0")}</span>
         {total > 0 && (
           <span className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3">
@@ -436,7 +442,7 @@ function ActionButton({
   children: React.ReactNode;
 }) {
   const className =
-    "font-mono text-mono uppercase tracking-wider px-4 py-2 border border-ink text-ink hover:bg-ink hover:text-paper transition-colors cursor-pointer";
+    "font-mono text-mono-sm uppercase tracking-wider px-3 py-1.5 border border-ink text-ink hover:bg-ink hover:text-paper transition-colors cursor-pointer";
   if (href) {
     return (
       <a
@@ -474,7 +480,7 @@ function ScoreColumn({
   return (
     <div
       className={[
-        "py-6 px-2 md:pr-6",
+        "py-6 px-5 md:pr-6",
         borderLeft
           ? "md:border-l md:border-rule md:pl-11"
           : "md:pl-9",
@@ -535,8 +541,12 @@ function Section({
     // article width and meets the article's left/right vertical rules
     // cleanly. last:border-b-0 keeps the bottommost section from stacking
     // a rule on top of the article's outer bottom border.
-    <section className="px-8 py-10 border-b border-rule last:border-b-0">
-      <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-accent mb-6">
+    <section className="px-5 sm:px-8 py-8 sm:py-10 border-b border-rule last:border-b-0">
+      {/* Mobile uses a smaller font + tighter tracking so long headings
+          like "What the Karens say about the service" still fit on one
+          line at narrow widths. Desktop keeps the editorial mono-sm
+          + 0.08em tracking. */}
+      <div className="font-mono text-[11px] tracking-wider sm:text-mono-sm sm:tracking-[0.08em] uppercase text-accent mb-6 whitespace-nowrap overflow-hidden text-ellipsis">
         {num} · {heading}
       </div>
       {children}
@@ -592,9 +602,24 @@ function QuoteStack({
       <div className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3">
         {quotes.length} {quotes.length === 1 ? "mention" : "mentions"}
       </div>
-      <div className="grid gap-8 max-w-3xl">
-        {quotes.slice(0, 50).map((q) => (
-          <Quote key={q.id} quote={q} aspect={aspect} />
+      <div className="grid gap-6 md:gap-8 max-w-3xl">
+        {quotes.slice(0, 50).map((q, i, arr) => (
+          <Fragment key={q.id}>
+            <Quote quote={q} aspect={aspect} />
+            {/* Mobile-only accent dot between mentions. The desktop
+                layout already has the 200px "N mentions" gutter as a
+                visual anchor; on mobile that gutter sits above the
+                stack instead, so consecutive mentions need their own
+                separator to keep the eye from running them together. */}
+            {i < arr.length - 1 && (
+              <div
+                aria-hidden="true"
+                className="md:hidden text-center text-accent text-2xl leading-none"
+              >
+                ·
+              </div>
+            )}
+          </Fragment>
         ))}
         {quotes.length > 50 && (
           <p className="font-mono text-mono-sm uppercase tracking-wider text-ink-3">
@@ -670,7 +695,7 @@ function Quote({
         </div>
       )}
 
-      <blockquote className="font-body text-ink leading-[1.45] m-0" style={{ fontSize: "21px" }}>
+      <blockquote className="font-body text-ink leading-[1.45] m-0 text-[18px] sm:text-[21px]">
         <span className="text-accent" aria-hidden="true">&ldquo;</span>
         {isTranslated ? quote.quote_translated : quote.quote}
         <span className="text-accent" aria-hidden="true">&rdquo;</span>
@@ -687,37 +712,37 @@ function Quote({
         </div>
       )}
 
-      <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-3">
         {quote.thread && (
-          <>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span>r/{quote.thread.subreddit}</span>
             <span className="text-rule-strong">·</span>
             <a
               href={quote.thread.url}
               target="_blank"
               rel="noreferrer"
-              className="text-ink-2 border-b border-rule-strong hover:text-ink hover:border-ink normal-case tracking-normal font-body text-body-sm italic"
+              className="text-ink-2 hover:text-ink normal-case tracking-normal font-body text-body-sm italic"
             >
               {quote.thread.title}
             </a>
-          </>
+          </div>
         )}
-        {quote.commentAuthor && quote.thread && (
-          <span className="text-rule-strong">·</span>
+        {quote.commentAuthor && (
+          <div className="mt-1">
+            {commentUrl ? (
+              <a
+                href={commentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink-2 hover:text-ink"
+              >
+                u/{quote.commentAuthor} ↗
+              </a>
+            ) : (
+              <span>u/{quote.commentAuthor}</span>
+            )}
+          </div>
         )}
-        {quote.commentAuthor &&
-          (commentUrl ? (
-            <a
-              href={commentUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-ink-2 border-b border-rule-strong hover:text-ink hover:border-ink"
-            >
-              u/{quote.commentAuthor} ↗
-            </a>
-          ) : (
-            <span>u/{quote.commentAuthor}</span>
-          ))}
       </div>
     </div>
   );
@@ -806,7 +831,7 @@ function MetaList({
       dd: (
         <ul className="grid gap-0.5">
           {collapsed.map((line, i) => (
-            <li key={i} className="font-body text-body text-ink leading-snug">
+            <li key={i} className="font-body text-body-sm sm:text-body text-ink leading-snug">
               {line}
             </li>
           ))}
@@ -822,7 +847,7 @@ function MetaList({
           href={restaurant.website}
           target="_blank"
           rel="noreferrer"
-          className="text-ink border-b border-rule-strong hover:border-ink"
+          className="block truncate text-ink border-b border-rule-strong hover:border-ink"
         >
           {hostnameOf(restaurant.website)} ↗
         </a>
@@ -847,7 +872,7 @@ function MetaList({
         <div
           key={i}
           className={[
-            "grid grid-cols-[120px_1fr] gap-4 items-baseline py-3 pl-8 pr-6",
+            "grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-4 items-baseline py-3 pl-5 pr-4 sm:pl-8 sm:pr-6",
             i > 0 ? "border-t border-rule" : "",
             i === rows.length - 1 ? "border-b border-rule" : "",
           ].join(" ")}
@@ -855,7 +880,7 @@ function MetaList({
           <dt className="font-mono text-mono-sm uppercase tracking-[0.06em] text-ink-3 m-0">
             {row.dt}
           </dt>
-          <dd className="m-0 font-body text-body text-ink">{row.dd}</dd>
+          <dd className="m-0 font-body text-body-sm sm:text-body text-ink min-w-0 break-words">{row.dd}</dd>
         </div>
       ))}
     </dl>

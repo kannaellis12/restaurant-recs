@@ -32,6 +32,13 @@ type Props = {
    * moveend). CityView uses this to filter the list to what's in view.
    */
   onBoundsChange?: (bounds: MapBounds) => void;
+  /**
+   * Fires only when the user actively starts dragging or zooming the
+   * map (not on programmatic flyTo). CityView uses this on mobile to
+   * dismiss the pin-preview card as soon as the user goes back to
+   * panning around — same pattern Airbnb uses on its mobile map.
+   */
+  onUserInteractStart?: () => void;
 };
 
 // Each marker is a column-flex of (circle, stem). Mapbox positions the wrapper
@@ -52,6 +59,7 @@ export function CityMap({
   hoveredId,
   onSelect,
   onBoundsChange,
+  onUserInteractStart,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
@@ -98,12 +106,20 @@ export function CityMap({
       setMapLoaded(true);
       emitBounds();
     };
+    // movestart fires for both user-initiated drags/zooms and programmatic
+    // flyTo. The `originalEvent` field is only populated when the move
+    // came from a user gesture, which is exactly the signal we want here.
+    const onMovestart = (e: { originalEvent?: Event }) => {
+      if (e.originalEvent) onUserInteractStart?.();
+    };
     map.on("load", onLoad);
     map.on("moveend", emitBounds);
+    map.on("movestart", onMovestart);
 
     return () => {
       map.off("load", onLoad);
       map.off("moveend", emitBounds);
+      map.off("movestart", onMovestart);
       markersRef.current.forEach(({ marker }) => marker.remove());
       markersRef.current.clear();
       map.remove();

@@ -47,7 +47,19 @@ export function RestaurantMiniMap({ restaurant }: Props) {
         .addTo(map);
     });
 
+    // Mapbox sizes the canvas at init and only re-measures on window
+    // resize. The container can change size on its own — e.g. our
+    // mobile/desktop responsive switch flips the wrapper from
+    // aspect-square to md:h-full — which leaves the canvas frozen at
+    // its original dimensions until something forces a resize. The
+    // ResizeObserver covers that.
+    const observer = new ResizeObserver(() => {
+      map.resize();
+    });
+    observer.observe(containerRef.current);
+
     return () => {
+      observer.disconnect();
       map.remove();
       mapRef.current = null;
     };

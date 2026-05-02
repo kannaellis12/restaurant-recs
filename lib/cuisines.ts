@@ -18,6 +18,7 @@ export const CUISINES: Cuisine[] = [
   { slug: "mexican", label: "Mexican" },
   { slug: "honduran", label: "Honduran" },
   { slug: "venezuelan", label: "Venezuelan" },
+  { slug: "peruvian", label: "Peruvian" },
   { slug: "caribbean", label: "Caribbean" },
   { slug: "mediterranean", label: "Mediterranean" },
   { slug: "spanish", label: "Spanish / Tapas" },

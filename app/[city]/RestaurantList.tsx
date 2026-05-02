@@ -52,7 +52,7 @@ export function RestaurantList({
   return (
     <div
       ref={containerRef}
-      className="overflow-y-auto border-r border-rule flex flex-col bg-paper"
+      className="overflow-y-auto md:border-r md:border-rule flex flex-col bg-paper"
     >
       {restaurants.length === 0 ? (
         <div className="px-6 py-12 text-center">
@@ -69,7 +69,12 @@ export function RestaurantList({
             {totalInView <= restaurants.length ? (
               <>
                 Showing{" "}
-                <span className="text-ink font-semibold">{restaurants.length}</span> in this view
+                <span className="text-ink font-semibold">{restaurants.length}</span>{" "}
+                {/* "in this view" is desktop-only — on mobile the map's
+                    viewport doesn't filter the list, so the qualifier is
+                    misleading. Mobile reads "X restaurants" instead. */}
+                <span className="hidden md:inline">in this view</span>
+                <span className="md:hidden">restaurants</span>
               </>
             ) : (
               <>
@@ -77,7 +82,9 @@ export function RestaurantList({
                 <span className="text-ink font-semibold">
                   {start}–{end}
                 </span>{" "}
-                of {totalInView} in this view
+                of {totalInView}{" "}
+                <span className="hidden md:inline">in this view</span>
+                <span className="md:hidden">restaurants</span>
               </>
             )}
           </div>
@@ -116,7 +123,7 @@ export function RestaurantList({
                       // been clicked once; until then it's a plain heading.
                       // That two-step ("locate on the map, then commit")
                       // keeps the detail page from being the default action.
-                      "grid grid-cols-[24px_minmax(0,1fr)_auto] gap-3 px-5 py-3",
+                      "relative grid grid-cols-[24px_minmax(0,1fr)] md:grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 gap-y-0 px-5 py-3",
                       "border-b border-rule items-start cursor-pointer outline-none",
                       "transition-colors hover:bg-paper-2 focus-visible:bg-paper-2",
                       "data-[selected=true]:bg-paper-2",
@@ -151,6 +158,13 @@ export function RestaurantList({
                             isSelected
                               ? "text-accent-deep decoration-accent"
                               : "text-ink decoration-rule hover:text-accent-deep hover:decoration-accent",
+                            // Mobile: stretch this link over the entire
+                            // card so a tap anywhere goes to the detail
+                            // page. The fly-to-map gesture isn't useful
+                            // when only one pane is visible at a time.
+                            // Desktop keeps its two-step (click row →
+                            // fly, click name → detail).
+                            "before:absolute before:inset-0 before:content-[''] md:before:hidden",
                           ].join(" ")}
                           title="View this restaurant's quotes and details"
                         >
@@ -171,14 +185,18 @@ export function RestaurantList({
                         priceLevel={r.priceLevel}
                       />
                       {r.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
+                        // Same pattern as MetaLine: single row with
+                        // mask-fade on mobile for consistent card
+                        // height regardless of how many vibes a place
+                        // has. Desktop wraps as before.
+                        <div className="flex gap-1 mt-2 overflow-x-auto md:overflow-visible md:flex-wrap [mask-image:linear-gradient(to_right,black_92%,transparent_100%)] md:[mask-image:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                           {r.tags.map((t) => {
                             const isTopForTag = topByTag.get(t)?.has(r.id) ?? false;
                             return (
                               <span
                                 key={t}
                                 className={[
-                                  "font-mono text-mono-sm uppercase tracking-[0.06em]",
+                                  "font-mono text-mono-sm uppercase tracking-[0.06em] whitespace-nowrap shrink-0",
                                   "px-2 py-0.5 rounded-full border",
                                   isTopForTag
                                     ? "border-accent bg-accent-soft text-accent-deep font-semibold"
@@ -193,12 +211,37 @@ export function RestaurantList({
                           })}
                         </div>
                       )}
+                      {/* Compact mobile-only scores. The full vertical
+                          score column (right side) eats ~35% of a 320px
+                          viewport — that squeezes the info column hard
+                          enough that cuisine names wrap mid-word. On
+                          mobile we drop that column and tuck a single-
+                          line summary under the info instead. */}
+                      <div className="md:hidden mt-2 flex items-baseline gap-x-2 gap-y-1 flex-wrap font-mono text-mono-sm uppercase tracking-wider">
+                        <CompactScore
+                          label="Food"
+                          score={r.foodScore}
+                          count={r.foodUniqueUsers}
+                          accent
+                        />
+                        {!hideService && (
+                          <>
+                            <span className="text-rule-strong">·</span>
+                            <CompactScore
+                              label="Service"
+                              score={r.serviceScore}
+                              count={r.serviceUniqueUsers}
+                            />
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {/* Scores — serif food score in accent, smaller service
                         below. "no data" renders as a faint em-dash in the
-                        same slot so the column doesn't reflow. */}
-                    <div className="text-right shrink-0 pl-2">
+                        same slot so the column doesn't reflow. Hidden on
+                        mobile in favor of the inline summary above. */}
+                    <div className="hidden md:block text-right shrink-0 pl-2">
                       <ScoreNumeral
                         label="Food"
                         score={r.foodScore}
@@ -249,7 +292,11 @@ function MetaLine({
   ].filter((x): x is string => Boolean(x));
   if (items.length === 0) return null;
   return (
-    <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+    // Mobile: single horizontally-scrollable row with a right-edge mask
+    // so a long meta line (e.g. "BAR / GASTROPUB · AMERICAN (CASUAL) ·
+    // $$$") doesn't bloat the card to two or three lines. Desktop: keep
+    // the original wrap behavior since space isn't as tight there.
+    <div className="font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3 mt-1 flex items-baseline gap-x-2 gap-y-1 overflow-x-auto md:overflow-visible whitespace-nowrap md:whitespace-normal md:flex-wrap [mask-image:linear-gradient(to_right,black_92%,transparent_100%)] md:[mask-image:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {items.map((it, i) => (
         <span key={i} className="contents">
           {i > 0 && <span className="text-rule-strong">·</span>}
@@ -312,6 +359,39 @@ function ScoreNumeral({
         {count === 1 ? "" : "s"}
       </div>
     </div>
+  );
+}
+
+/**
+ * Mobile-only one-liner score: "FOOD 8.9 (10)". Renders as inline
+ * baseline-aligned spans so it sits naturally on the bottom of the
+ * info column alongside the meta line. Also reused by the map's
+ * pin-preview card on mobile.
+ */
+export function CompactScore({
+  label,
+  score,
+  count,
+  accent = false,
+}: {
+  label: string;
+  score: number | null;
+  count: number;
+  accent?: boolean;
+}) {
+  return (
+    <span className="inline-flex items-baseline gap-1 text-ink-3">
+      <span>{label}</span>
+      <span
+        className={[
+          "font-display font-medium leading-none tracking-tight text-base",
+          accent ? "text-accent" : "text-ink",
+        ].join(" ")}
+      >
+        {score === null ? "—" : (score * 10).toFixed(1)}
+      </span>
+      {score !== null && <span>({count})</span>}
+    </span>
   );
 }
 
