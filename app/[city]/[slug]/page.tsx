@@ -5,13 +5,13 @@ import type { RestaurantSummary, Tag } from "@/lib/types";
 import { RestaurantDetailView, type QuoteCard, type SiblingLocation } from "./RestaurantDetailView";
 
 type PageProps = {
-  params: Promise<{ city: string; placeId: string }>;
+  params: Promise<{ city: string; slug: string }>;
 };
 
 export const revalidate = 60;
 
 export default async function RestaurantDetailPage({ params }: PageProps) {
-  const { city: citySlug, placeId } = await params;
+  const { city: citySlug, slug: restaurantSlug } = await params;
   const city = CITIES_BY_SLUG[citySlug];
   if (!city) notFound();
 
@@ -19,7 +19,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
     .from("restaurants_with_scores")
     .select("*")
     .eq("city_slug", citySlug)
-    .eq("place_id", placeId)
+    .eq("slug", restaurantSlug)
     .maybeSingle();
 
   if (rErr) throw new Error(`Failed to load restaurant: ${rErr.message}`);
@@ -148,7 +148,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
   // "Corvus Coffee Roasters") is a future enrichment.
   const { data: siblingRows } = await supabase
     .from("restaurants")
-    .select("id, name, place_id, neighborhood, address")
+    .select("id, name, slug, place_id, neighborhood, address")
     .eq("name", restaurant.name)
     .eq("city_slug", citySlug)
     .eq("closed", false)
@@ -156,6 +156,7 @@ export default async function RestaurantDetailPage({ params }: PageProps) {
 
   const siblings: SiblingLocation[] = (siblingRows ?? []).map((s) => ({
     placeId: s.place_id as string,
+    slug: s.slug as string,
     name: s.name as string,
     neighborhood: (s.neighborhood as string | null) ?? null,
     address: (s.address as string | null) ?? null,
@@ -176,6 +177,7 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
   return {
     id: row.id,
     placeId: row.place_id,
+    slug: row.slug,
     name: row.name,
     citySlug: row.city_slug,
     neighborhood: row.neighborhood,

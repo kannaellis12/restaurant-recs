@@ -52,6 +52,7 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
   return {
     id: row.id,
     placeId: row.place_id,
+    slug: row.slug,
     name: row.name,
     citySlug: row.city_slug,
     neighborhood: row.neighborhood,

@@ -29,6 +29,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export type RestaurantWithScoresRow = {
   id: string;
   place_id: string;
+  slug: string;
   name: string;
   city_slug: string;
   neighborhood: string | null;

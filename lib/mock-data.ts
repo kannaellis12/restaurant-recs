@@ -14,6 +14,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-1",
     placeId: "mock-place-1",
+    slug: "mock-slug-1",
     name: "Sushi Den",
     citySlug: "denver",
     neighborhood: "Platt Park",
@@ -34,6 +35,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-2",
     placeId: "mock-place-2",
+    slug: "mock-slug-2",
     name: "Sap Sua",
     citySlug: "denver",
     neighborhood: "Congress Park",
@@ -54,6 +56,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-3",
     placeId: "mock-place-3",
+    slug: "mock-slug-3",
     name: "Tacos Tequila Whiskey",
     citySlug: "denver",
     neighborhood: "Uptown",
@@ -74,6 +77,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-4",
     placeId: "mock-place-4",
+    slug: "mock-slug-4",
     name: "Tavernetta",
     citySlug: "denver",
     neighborhood: "LoDo",
@@ -94,6 +98,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-5",
     placeId: "mock-place-5",
+    slug: "mock-slug-5",
     name: "Hop Alley",
     citySlug: "denver",
     neighborhood: "RiNo",
@@ -114,6 +119,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-6",
     placeId: "mock-place-6",
+    slug: "mock-slug-6",
     name: "Mister Oso",
     citySlug: "denver",
     neighborhood: "RiNo",
@@ -134,6 +140,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-7",
     placeId: "mock-place-7",
+    slug: "mock-slug-7",
     name: "Pizzeria Locale",
     citySlug: "denver",
     neighborhood: "Highlands",
@@ -154,6 +161,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-8",
     placeId: "mock-place-8",
+    slug: "mock-slug-8",
     name: "Safta",
     citySlug: "denver",
     neighborhood: "RiNo",
@@ -174,6 +182,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-9",
     placeId: "mock-place-9",
+    slug: "mock-slug-9",
     name: "Snooze, an A.M. Eatery",
     citySlug: "denver",
     neighborhood: "Ballpark",
@@ -194,6 +203,7 @@ export const MOCK_DENVER_RESTAURANTS: RestaurantSummary[] = [
   {
     id: "mock-10",
     placeId: "mock-place-10",
+    slug: "mock-slug-10",
     name: "Sam's No. 3",
     citySlug: "denver",
     neighborhood: "Downtown",

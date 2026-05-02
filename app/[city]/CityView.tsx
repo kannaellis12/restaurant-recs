@@ -435,7 +435,7 @@ export function CityView({ city, restaurants }: Props) {
         return (
           <div className="md:hidden fixed bottom-3 left-3 right-3 z-30">
             <Link
-              href={`/${r.citySlug}/${r.placeId}`}
+              href={`/${r.citySlug}/${r.slug}`}
               className="block bg-paper border border-rule shadow-lg pl-5 pr-12 py-4 hover:bg-paper-2 transition-colors"
             >
               <div className="flex items-baseline gap-2">

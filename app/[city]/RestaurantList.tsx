@@ -151,7 +151,7 @@ export function RestaurantList({
                             div's onClick); stopPropagation here keeps
                             name-clicks from also triggering that. */}
                         <Link
-                          href={`/${r.citySlug}/${r.placeId}`}
+                          href={`/${r.citySlug}/${r.slug}`}
                           onClick={(e) => e.stopPropagation()}
                           className={[
                             "font-display font-medium text-h4 leading-[1.1] tracking-tight truncate transition-colors",

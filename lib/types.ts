@@ -8,6 +8,11 @@ export type Sentiment = "positive" | "negative" | "mixed";
 export type RestaurantSummary = {
   id: string;
   placeId: string;
+  /** URL-friendly slug, unique within a city. Drives the detail page
+   *  route /[city]/[slug]. Generated server-side on insert/rename
+   *  by the slugify trigger; conflicts disambiguate by appending
+   *  `-{place_id}`. */
+  slug: string;
   name: string;
   citySlug: string;
   neighborhood: string | null;

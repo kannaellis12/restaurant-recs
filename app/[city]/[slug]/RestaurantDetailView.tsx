@@ -32,6 +32,7 @@ export type QuoteCard = {
 
 export type SiblingLocation = {
   placeId: string;
+  slug: string;
   name: string;
   neighborhood: string | null;
   address: string | null;
@@ -916,7 +917,7 @@ function SiblingsList({
           {siblings.map((s) => (
             <Link
               key={s.placeId}
-              href={`/${city.slug}/${s.placeId}`}
+              href={`/${city.slug}/${s.slug}`}
               className="block py-3 border-t border-rule last:border-b last:border-rule hover:bg-paper-2 transition-colors px-2 -mx-2"
             >
               <div className="font-display text-h4 font-medium tracking-tight text-ink hover:text-accent transition-colors">
