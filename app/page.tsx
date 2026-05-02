@@ -26,7 +26,7 @@ export default function Home() {
           <CityRequest compact />
         </div>
         <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 justify-self-end">
-          v0.1 · Apr 2026
+          v0.1 · May 2026
         </span>
       </header>
 
@@ -59,7 +59,7 @@ export default function Home() {
                 <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mb-3">
                   {String(i + 1).padStart(2, "0")} / {String(CITIES.length).padStart(2, "0")}
                 </div>
-                <div className="font-display text-h2 leading-none text-ink group-hover:text-accent transition-colors">
+                <div className="font-display text-[32px] sm:text-h2 leading-none text-ink group-hover:text-accent transition-colors">
                   {city.name}<span className="text-accent">.</span>
                 </div>
                 <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-3">
