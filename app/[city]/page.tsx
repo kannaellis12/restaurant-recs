@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { CITIES_BY_SLUG } from "@/lib/cities";
 import { supabase, type RestaurantWithScoresRow } from "@/lib/supabase";
@@ -36,7 +37,15 @@ export default async function CityPage({ params }: PageProps) {
 
   const restaurants = (data ?? []).map(toSummary);
 
-  return <CityView city={city} restaurants={restaurants} />;
+  // Suspense boundary needed for CityView's useSearchParams() — Next.js
+  // 16 requires an explicit suspense for client-side bailout when a
+  // route is being statically prerendered (which this page is, via
+  // generateStaticParams).
+  return (
+    <Suspense fallback={null}>
+      <CityView city={city} restaurants={restaurants} />
+    </Suspense>
+  );
 }
 
 function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
