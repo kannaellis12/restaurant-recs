@@ -537,6 +537,37 @@ export async function skipFlag(formData: FormData): Promise<void> {
  * restaurant_id and zeros its vote weight so it stops contributing to
  * scores.
  */
+/**
+ * Mark a city-request rollup as "done" — the city has been added to
+ * the editorial set, or the admin has otherwise closed the request.
+ * Keyed by place_id so a single resolution covers every request row
+ * for that place (including ones that arrive after the resolution).
+ */
+export async function resolveCityRequest(formData: FormData): Promise<void> {
+  const placeId = String(formData.get("placeId") ?? "");
+  if (!placeId) return;
+  await adminClient()
+    .from("city_request_resolutions")
+    .upsert({
+      place_id: placeId,
+      resolved_at: new Date().toISOString(),
+      resolved_by: "admin",
+    });
+  revalidatePath("/admin");
+}
+
+/** Undo `resolveCityRequest` — drops the resolutions row, putting the
+ *  request back into the pending queue. */
+export async function unresolveCityRequest(formData: FormData): Promise<void> {
+  const placeId = String(formData.get("placeId") ?? "");
+  if (!placeId) return;
+  await adminClient()
+    .from("city_request_resolutions")
+    .delete()
+    .eq("place_id", placeId);
+  revalidatePath("/admin");
+}
+
 export async function dismissFlag(formData: FormData): Promise<void> {
   const flagId = String(formData.get("flagId") ?? "");
   if (!flagId) return;

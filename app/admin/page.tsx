@@ -5,7 +5,12 @@ import { CITIES, CITIES_BY_SLUG } from "@/lib/cities";
 import { LoginForm } from "./LoginForm";
 import { FlagCard } from "./FlagCard";
 import { RestaurantEditor, type EditableRestaurant } from "./RestaurantEditor";
-import { logout, recomputeScores } from "./actions";
+import {
+  logout,
+  recomputeScores,
+  resolveCityRequest,
+  unresolveCityRequest,
+} from "./actions";
 
 // Always render fresh — mutations need to show up immediately.
 export const dynamic = "force-dynamic";
@@ -156,36 +161,70 @@ export default async function AdminPage({
           </p>
         ) : (
           <div className="border border-gray-200 dark:border-gray-800 rounded">
-            <div className="grid grid-cols-[2fr_1fr_0.6fr_1fr] gap-3 items-baseline px-3 py-2 border-b border-gray-200 dark:border-gray-800 text-xs uppercase tracking-wide text-gray-500">
+            <div className="grid grid-cols-[2fr_1fr_0.5fr_0.9fr_auto] gap-3 items-baseline px-3 py-2 border-b border-gray-200 dark:border-gray-800 text-xs uppercase tracking-wide text-gray-500">
               <div>Place</div>
               <div>Region / Country</div>
               <div>Requests</div>
               <div>Most recent</div>
+              <div className="text-right">Status</div>
             </div>
-            {cityRequests.map((r) => (
-              <div
-                key={r.place_id}
-                className="grid grid-cols-[2fr_1fr_0.6fr_1fr] gap-3 items-baseline px-3 py-2 border-b border-gray-100 dark:border-gray-900 last:border-b-0 text-sm"
-              >
-                <div>
-                  <div className="font-medium">{r.city}</div>
-                  <div className="text-xs text-gray-500 truncate" title={r.place_name}>
-                    {r.place_name}
+            {cityRequests.map((r) => {
+              const done = r.resolved_at !== null;
+              return (
+                <div
+                  key={r.place_id}
+                  className={[
+                    "grid grid-cols-[2fr_1fr_0.5fr_0.9fr_auto] gap-3 items-center px-3 py-2 border-b border-gray-100 dark:border-gray-900 last:border-b-0 text-sm",
+                    done ? "opacity-60" : "",
+                  ].join(" ")}
+                >
+                  <div>
+                    <div className="font-medium">{r.city}</div>
+                    <div
+                      className="text-xs text-gray-500 truncate"
+                      title={r.place_name}
+                    >
+                      {r.place_name}
+                    </div>
                   </div>
+                  <div className="text-gray-600 dark:text-gray-400">
+                    {[r.region, r.country].filter(Boolean).join(" / ") || "—"}
+                  </div>
+                  <div className="font-semibold">{r.count}</div>
+                  <div className="text-gray-500 text-xs">
+                    {new Date(r.latest_at).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+                  {done ? (
+                    <form action={unresolveCityRequest} className="text-right">
+                      <input type="hidden" name="placeId" value={r.place_id} />
+                      <span className="text-xs text-green-600 dark:text-green-400 mr-2">
+                        ✓ Done
+                      </span>
+                      <button
+                        type="submit"
+                        className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
+                      >
+                        Undo
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={resolveCityRequest} className="text-right">
+                      <input type="hidden" name="placeId" value={r.place_id} />
+                      <button
+                        type="submit"
+                        className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                      >
+                        Mark as done
+                      </button>
+                    </form>
+                  )}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {[r.region, r.country].filter(Boolean).join(" / ") || "—"}
-                </div>
-                <div className="font-semibold">{r.count}</div>
-                <div className="text-gray-500 text-xs">
-                  {new Date(r.latest_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -308,18 +347,35 @@ type CityRequestRollup = {
   country: string | null;
   count: number;
   latest_at: string;
+  /** When the admin marked this place as done. Null = still pending. */
+  resolved_at: string | null;
 };
 
 async function loadCityRequests(): Promise<CityRequestRollup[]> {
   const supabase = adminClient();
-  const { data, error } = await supabase
-    .from("city_requests")
-    .select("place_id, place_name, city, region, country, created_at")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(`Failed to load city requests: ${error.message}`);
+  // Two parallel reads: the requests themselves (one row per click)
+  // and the per-place resolution table (at most one row per place_id,
+  // present iff the admin has marked it done).
+  const [{ data: requestRows, error: reqErr }, { data: resolutionRows, error: resErr }] =
+    await Promise.all([
+      supabase
+        .from("city_requests")
+        .select("place_id, place_name, city, region, country, created_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("city_request_resolutions")
+        .select("place_id, resolved_at"),
+    ]);
+  if (reqErr) throw new Error(`Failed to load city requests: ${reqErr.message}`);
+  if (resErr) throw new Error(`Failed to load city request resolutions: ${resErr.message}`);
+
+  const resolvedAt = new Map<string, string>();
+  for (const r of (resolutionRows ?? []) as Array<{ place_id: string; resolved_at: string }>) {
+    resolvedAt.set(r.place_id, r.resolved_at);
+  }
 
   const byPlace = new Map<string, CityRequestRollup>();
-  for (const row of (data ?? []) as Array<{
+  for (const row of (requestRows ?? []) as Array<{
     place_id: string;
     place_name: string;
     city: string;
@@ -340,10 +396,17 @@ async function loadCityRequests(): Promise<CityRequestRollup[]> {
         country: row.country,
         count: 1,
         latest_at: row.created_at,
+        resolved_at: resolvedAt.get(row.place_id) ?? null,
       });
     }
   }
-  return [...byPlace.values()].sort((a, b) => b.count - a.count);
+  // Pending first (sorted by count), then resolved (sorted by count).
+  return [...byPlace.values()].sort((a, b) => {
+    const aDone = a.resolved_at ? 1 : 0;
+    const bDone = b.resolved_at ? 1 : 0;
+    if (aDone !== bDone) return aDone - bDone;
+    return b.count - a.count;
+  });
 }
 
 async function loadRestaurantsForCity(
