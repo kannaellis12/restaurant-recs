@@ -58,13 +58,41 @@ const monoFont = localFont({
   display: "swap",
 });
 
+// Site-wide tagline used in both the meta description and OG/Twitter
+// previews. Matches the hero subhead so social previews read in the
+// same voice as the homepage.
+const SITE_DESCRIPTION =
+  "Restaurant reviews from Reddit that filter out the Karens. A field " +
+  "guide to good food in Denver, Paris, Calgary, and New Orleans.";
+
 export const metadata: Metadata = {
-  title: "Restaurants of Reddit",
-  description:
-    "An editorial field guide to good food in Denver, Paris, Calgary, and " +
-    "New Orleans — ranked by what people actually said on Reddit.",
+  // Template lets per-route metadata prepend the page title — e.g. a
+  // detail page can `export const metadata = { title: "Septime" }` and
+  // it'll render as "Septime · Restaurants of Reddit".
+  title: {
+    default: "Restaurants of Reddit",
+    template: "%s · Restaurants of Reddit",
+  },
+  description: SITE_DESCRIPTION,
   icons: {
     icon: "/brand/RoR-glyph1.svg",
+  },
+  openGraph: {
+    title: "Restaurants of Reddit",
+    description: SITE_DESCRIPTION,
+    siteName: "Restaurants of Reddit",
+    type: "website",
+    locale: "en_US",
+    // The actual image comes from the app/opengraph-image.png file
+    // convention — Next.js attaches it automatically. We don't list
+    // it here, otherwise the file-convention image is overridden.
+  },
+  twitter: {
+    // 1200x630 art works as a "large image" card; the small-summary
+    // card would crop it to a square thumbnail.
+    card: "summary_large_image",
+    title: "Restaurants of Reddit",
+    description: SITE_DESCRIPTION,
   },
 };
 
