@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 // Display family — Argesta Display by Atipo Foundry. Used for the city-name
@@ -115,7 +116,13 @@ export default function RootLayout({
             when CSS hasn't kicked in yet. */}
         <meta name="color-scheme" content="light" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/* Vercel Analytics: page-view + visitor counts in the Vercel
+            dashboard. No PII collected. Lives in the body so it ships
+            with every route. */}
+        <Analytics />
+      </body>
     </html>
   );
 }

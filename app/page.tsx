@@ -38,7 +38,7 @@ export default function Home() {
           <span>{CITIES.length} cities</span>
         </div>
 
-        <h1 className="font-display font-medium leading-[0.95] tracking-[-0.02em] text-ink mb-6 text-[40px] sm:text-[56px] md:text-[72px]">
+        <h1 className="font-display font-medium leading-[0.95] tracking-[-0.02em] text-ink mb-6 text-[48px] sm:text-[56px] md:text-[72px]">
           Reviews from Reddit that{" "}
           <em className="text-accent font-display italic">filter out the Karens</em>.
         </h1>
