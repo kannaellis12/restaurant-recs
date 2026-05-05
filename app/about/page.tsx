@@ -332,6 +332,14 @@ export default function AboutPage() {
           - Kelsey
         </p>
 
+        {/* ---- REQUEST-A-CITY (mobile only) -------------------------- */
+        /* Desktop has the compact version in the header; mobile gets the
+           full widget here. Mirrors the homepage pattern where the mobile
+           widget lives below the city cards. */}
+        <div className="sm:hidden mb-12 max-w-md">
+          <CityRequest />
+        </div>
+
         {/* ---- BACK LINK --------------------------------------------- */}
         <div className="border-t border-rule pt-8">
           <Link
