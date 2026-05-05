@@ -64,7 +64,7 @@ const monoFont = localFont({
 // same voice as the homepage.
 const SITE_DESCRIPTION =
   "Restaurant reviews from Reddit that filter out the Karens. A field " +
-  "guide to good food in Denver, Paris, Calgary, and New Orleans.";
+  "guide to good food in Denver, Paris, Calgary, and New Orleans (for now).";
 
 export const metadata: Metadata = {
   // Template lets per-route metadata prepend the page title — e.g. a
