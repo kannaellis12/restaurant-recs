@@ -34,7 +34,12 @@ export type RestaurantSummary = {
   serviceScore: number | null;
   serviceUniqueUsers: number;
 
-  /** Total unique users (food OR service) — used for "volume" sort */
+  /** Bare-name mentions in neutral search threads — volume signal only,
+   *  no sentiment. Shown on the card as "+ N more mentions" when > 0. */
+  mentionOnlyUsers: number;
+
+  /** Total unique users (food OR service OR mention-only) — drives both
+   *  the "volume" sort and the rank tiebreak. */
   totalUniqueUsers: number;
 
   /** 1-indexed rank within the city, recomputed each refresh */

@@ -174,8 +174,10 @@ export default function AboutPage() {
             &ldquo;Best date night in Denver?&rdquo; and someone just
             responds, &ldquo;Tavernetta,&rdquo; that counts as a positive
             food vote. Neutral search threads (&ldquo;Where can I find sushi?
-            Any sushi at all.&rdquo;) are skipped since it&rsquo;s unclear
-            whether the sentiment is good or bad.
+            Any sushi at all.&rdquo;) don&rsquo;t imply sentiment either way,
+            so those bare names get logged as buzz only and surface on the
+            card as &ldquo;+ N more mentions&rdquo;, separate from the food
+            or service score.
           </p>
           <p className="font-body text-body text-ink-2">
             For non-English comments, the model returns both the original

@@ -5,7 +5,11 @@ For each restaurant in a city:
   - service_score = same shape
   - food_unique_users = distinct comments that supplied a food sentiment
   - service_unique_users = distinct comments that supplied a service sentiment
-  - total_unique_users = distinct comments touching either aspect
+  - mention_only_users = distinct comments that named the place but supplied
+    NEITHER sentiment (bare-name responses in neutral search threads — see
+    extract.py rule 6). Volume signal without scoring impact.
+  - total_unique_users = distinct comments touching either aspect OR
+    mention-only — used for the volume-tiebreak in city ranking.
 
 Then sort restaurants by a Bayesian-smoothed food score (penalizes "100% liked
 it" with N=1 against e.g. "92% liked it" with N=80) and write city_rank.
@@ -91,6 +95,7 @@ def _aggregate_for_restaurant(restaurant_id: str) -> dict:
     service_pos = service_neg = 0.0
     food_users: set[str] = set()
     service_users: set[str] = set()
+    mention_only: set[str] = set()
     tag_counts: dict[str, int] = {}
 
     for row in rows:
@@ -119,6 +124,12 @@ def _aggregate_for_restaurant(restaurant_id: str) -> dict:
                 service_pos += w * 0.5
                 service_neg += w * 0.5
 
+        # Volume-only: comment named the place but expressed no sentiment.
+        # Counted in total_unique_users for rank tiebreak; surfaced on the
+        # restaurant card as "+ N more mentions".
+        if food is None and service is None:
+            mention_only.add(comment_id)
+
         for tag in (row.get("tags") or []):
             tag_counts[tag] = tag_counts.get(tag, 0) + 1
 
@@ -135,7 +146,8 @@ def _aggregate_for_restaurant(restaurant_id: str) -> dict:
         "service_positive":     round(service_pos, 3),
         "service_negative":     round(service_neg, 3),
         "service_unique_users": len(service_users),
-        "total_unique_users":   len(food_users | service_users),
+        "mention_only_users":   len(mention_only),
+        "total_unique_users":   len(food_users | service_users | mention_only),
         "tags":                 sticky_tags,
     }
 

@@ -66,6 +66,7 @@ function toSummary(row: RestaurantWithScoresRow): RestaurantSummary {
     foodUniqueUsers: row.food_unique_users,
     serviceScore: row.service_score,
     serviceUniqueUsers: row.service_unique_users,
+    mentionOnlyUsers: row.mention_only_users,
     totalUniqueUsers: row.total_unique_users,
     // city_rank can be null briefly between extraction and scoring — show
     // unranked rows at the bottom with a fallback rank value.

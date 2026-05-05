@@ -35,6 +35,10 @@ type Aggregate = {
   service_positive: number;
   service_negative: number;
   service_unique_users: number;
+  /** Distinct comments that named the place but supplied NEITHER sentiment
+   *  (bare-name responses in neutral search threads — see extract.py rule 6).
+   *  Volume signal only; doesn't affect food_score or service_score. */
+  mention_only_users: number;
   total_unique_users: number;
   tags: string[];
 };
@@ -84,6 +88,7 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
       users = {
         food: new Set<string>(),
         service: new Set<string>(),
+        mentionOnly: new Set<string>(),
         tagCounts: new Map<string, number>(),
       };
       usersByRestaurant.set(row.restaurant_id, users);
@@ -142,6 +147,7 @@ export async function computeScoresForCity(citySlug: string): Promise<number> {
 type UserTracking = {
   food: Set<string>;
   service: Set<string>;
+  mentionOnly: Set<string>;
   tagCounts: Map<string, number>;
 };
 
@@ -155,6 +161,7 @@ function newAggregate(): Aggregate {
     service_positive: 0,
     service_negative: 0,
     service_unique_users: 0,
+    mention_only_users: 0,
     total_unique_users: 0,
     tags: [],
   };
@@ -182,6 +189,13 @@ function accumulate(agg: Aggregate, users: UserTracking, row: ExtractionRow) {
     }
   }
 
+  // Volume-only: comment named the place but expressed no sentiment.
+  // Counted in total_unique_users for rank tiebreak; surfaced on the
+  // restaurant card as "+ N more mentions".
+  if (row.food_sentiment === null && row.service_sentiment === null) {
+    users.mentionOnly.add(row.comment_id);
+  }
+
   for (const tag of row.tags ?? []) {
     users.tagCounts.set(tag, (users.tagCounts.get(tag) ?? 0) + 1);
   }
@@ -189,7 +203,12 @@ function accumulate(agg: Aggregate, users: UserTracking, row: ExtractionRow) {
   // Derived counts in lock-step.
   agg.food_unique_users = users.food.size;
   agg.service_unique_users = users.service.size;
-  agg.total_unique_users = new Set([...users.food, ...users.service]).size;
+  agg.mention_only_users = users.mentionOnly.size;
+  agg.total_unique_users = new Set([
+    ...users.food,
+    ...users.service,
+    ...users.mentionOnly,
+  ]).size;
 
   // Canonical 3-decimal precision (matches Python).
   agg.food_positive = round3(agg.food_positive);

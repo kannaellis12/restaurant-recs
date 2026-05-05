@@ -185,6 +185,16 @@ export function RestaurantList({
                         cuisines={r.cuisines}
                         priceLevel={r.priceLevel}
                       />
+                      {r.mentionOnlyUsers > 0 && (
+                        // Volume-only mentions: place was named in a
+                        // neutral search thread without any sentiment.
+                        // Quiet mono caption — surfaces buzz without
+                        // competing with the food/service score column.
+                        <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-1">
+                          + {r.mentionOnlyUsers} more mention
+                          {r.mentionOnlyUsers === 1 ? "" : "s"}
+                        </div>
+                      )}
                       {r.tags.length > 0 && (
                         // Same pattern as MetaLine: single row with
                         // mask-fade on mobile for consistent card

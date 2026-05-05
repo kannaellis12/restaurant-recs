@@ -44,6 +44,10 @@ export type RestaurantWithScoresRow = {
   food_unique_users: number;
   service_score: number | null;
   service_unique_users: number;
+  /** Distinct comments that named the place but supplied NEITHER sentiment
+   *  (bare-name responses in neutral search threads). Volume signal only;
+   *  surfaces on the card as "+ N more mentions". */
+  mention_only_users: number;
   total_unique_users: number;
   /** Vibe/occasion tags from the restaurant_scores aggregation. */
   tags: string[];

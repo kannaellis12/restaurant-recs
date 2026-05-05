@@ -451,6 +451,12 @@ export function CityView({ city, restaurants }: Props) {
                   {metaItems.join(" · ")}
                 </div>
               )}
+              {r.mentionOnlyUsers > 0 && (
+                <div className="mt-1 font-mono text-mono-sm uppercase tracking-[0.04em] text-ink-3">
+                  + {r.mentionOnlyUsers} more mention
+                  {r.mentionOnlyUsers === 1 ? "" : "s"}
+                </div>
+              )}
               {r.tags.length > 0 && (
                 <div className="mt-2 flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_92%,transparent_100%)]">
                   {r.tags.map((t) => (

@@ -58,8 +58,12 @@ your last meal", "Restaurants for life") → bare name → food_sentiment=positi
     - Pan threads ("Worst restaurants?", "Most overhyped?", "Avoid which \
 restaurants?", "Where NOT to eat") → bare name → food_sentiment=negative
     - Neutral search threads ("Where to find sushi?", "Any good cocktail \
-bars near X?", "Open late on Sunday?") → DO NOT infer polarity; bare-name \
-comments here are neutral and should be SKIPPED entirely.
+bars near X?", "Open late on Sunday?") → DO NOT infer polarity, but DO \
+extract the mention. Bare-name comments here are volume-only signals: \
+someone naming the place as an answer is evidence the place is in \
+people's minds, even though no sentiment was expressed. OMIT both \
+food_sentiment and service_sentiment from the output so the mention is \
+recorded without affecting either score.
   When inferring polarity from the thread, set the `quote` to a short \
 verbatim snippet of the comment (or the bare name itself if that's all \
 there is).
@@ -112,9 +116,12 @@ outside this list.
 
 Strict rules:
   - Only extract EVALUATIONS (positive or negative judgments). Skip neutral \
-mentions like "I went to X last week" or "X is on 16th street". EXCEPTION: \
-under a recommendation or pan thread (see rule 6), a bare restaurant name \
-IS an evaluation — extract it and apply the thread-implied sentiment.
+mentions like "I went to X last week" or "X is on 16th street". EXCEPTIONS \
+(see rule 6):
+      * Recommendation or pan thread + bare name → extract with the \
+thread-implied sentiment.
+      * Neutral search thread + bare name → extract as a volume-only \
+mention; OMIT both food_sentiment and service_sentiment.
   - Food and service sentiments are INDEPENDENT. "Great food but slow service" \
 → food=positive AND service=negative on the same extraction. Don't average.
   - "mixed" means the SAME aspect was both praised and criticized in the same \
