@@ -333,7 +333,10 @@ export function RestaurantDetailView({
           ← All cities
         </Link>
         <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center order-first md:order-none">
-          Restaurants of Reddit
+          Restaurants of Reddit{" · "}
+          <Link href="/about" className="hover:text-ink transition-colors">
+            About
+          </Link>
         </p>
         <div className="flex md:justify-end justify-center">
           <Image

@@ -26,7 +26,10 @@ export default function Home() {
           <CityRequest compact />
         </div>
         <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 justify-self-end">
-          v0.1 · May 2026
+          <Link href="/about" className="hover:text-accent transition-colors">
+            About
+          </Link>
+          {" · v0.1 · May 2026"}
         </span>
       </header>
 

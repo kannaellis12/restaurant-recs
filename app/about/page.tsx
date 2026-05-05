@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { CityRequest } from "../CityRequest";
 
 /**
  * About / how-it-works page.
@@ -20,14 +21,16 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "How Restaurants of Reddit turns city subreddits into ranked restaurant reviews — the pipeline, the scoring, and the honest limits.",
+    "How Restaurants of Reddit turns city subreddits into ranked restaurant reviews: the pipeline, the scoring, and the honest limits.",
 };
 
 export default function AboutPage() {
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Header — mirrors the homepage so the page reads as part of the site. */}
-      <header className="px-4 sm:px-8 py-4 sm:py-6 border-b border-rule grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-6">
+      {/* Header mirrors the homepage: logo / Request-a-city (desktop only) /
+          version stamp. About link is dropped from the right side here
+          since we're already on /about. */}
+      <header className="px-4 sm:px-8 py-4 sm:py-6 border-b border-rule grid grid-cols-[auto_auto] sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
         <Link href="/" className="justify-self-start">
           <Image
             src="/brand/RoR-logo-no-tagline.svg"
@@ -38,9 +41,11 @@ export default function AboutPage() {
             className="h-8 sm:h-10 w-auto"
           />
         </Link>
-        <span aria-hidden />
+        <div className="hidden sm:block w-64">
+          <CityRequest compact />
+        </div>
         <span className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 justify-self-end">
-          About
+          v0.1 · May 2026
         </span>
       </header>
 
@@ -48,12 +53,12 @@ export default function AboutPage() {
         {/* ---- EYEBROW + HEADLINE ------------------------------------- */}
         <div className="font-mono text-mono uppercase tracking-wider text-ink-3 mb-6 flex items-baseline gap-3">
           <span className="text-accent">●</span>
-          <span>How it works</span>
+          <span>About</span>
         </div>
 
         <h1 className="font-display font-medium leading-[0.95] tracking-[-0.02em] text-ink mb-8 text-[40px] sm:text-[56px]">
-          How a Reddit thread becomes a{" "}
-          <em className="text-accent font-display italic">restaurant rank</em>.
+          How it {" "}
+          <em className="text-accent font-display italic">works</em>.
         </h1>
 
         {/* ---- INTRO -------------------------------------------------- */}
@@ -294,7 +299,7 @@ export default function AboutPage() {
         </section>
 
         {/* ---- LIMITS ------------------------------------------------- */}
-        <SectionHeading step="08" title="Honest limits" />
+        <SectionHeading step="08" title="Limitations" />
         <section className="mb-12">
           <p className="font-body text-body text-ink-2 mb-5">
             Reddit comes with its own imperfections, of course. Cities with
@@ -321,6 +326,11 @@ export default function AboutPage() {
             wink emoji.
           </p>
         </section>
+
+        {/* ---- SIGNOFF ----------------------------------------------- */}
+        <p className="font-mono text-mono uppercase tracking-wider text-accent mb-12">
+          - Kelsey
+        </p>
 
         {/* ---- BACK LINK --------------------------------------------- */}
         <div className="border-t border-rule pt-8">
