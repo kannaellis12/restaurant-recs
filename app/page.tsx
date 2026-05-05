@@ -87,7 +87,10 @@ export default function Home() {
           bottom-align to the glyph's baseline. */}
       <footer className="px-5 sm:px-8 pt-10 sm:pt-16 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 md:items-end">
         <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center md:text-left max-w-sm">
-          A field guide to good food.
+          A field guide to good food.{" "}
+          <Link href="/about" className="hover:text-accent transition-colors underline-offset-4 hover:underline">
+            About
+          </Link>
         </p>
         <p className="font-mono text-mono-sm uppercase tracking-[0.08em] text-ink-3 text-center order-first md:order-none">
           Restaurants of Reddit
