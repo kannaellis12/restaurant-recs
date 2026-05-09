@@ -171,8 +171,8 @@ def main() -> int:
         # Index once per thread for in-memory parent-chain walking.
         comments_by_reddit_id = {c["reddit_id"]: c for c in comments}
         for c in comments:
-            if db.comment_has_extractions(c["id"]):
-                continue  # already processed in a prior run
+            if db.comment_has_been_extracted(c["id"]):
+                continue  # already processed in a prior run (incl. empty results)
             parent_chain = db.walk_parent_chain(
                 c["reddit_id"], comments_by_reddit_id, max_depth=3
             )
@@ -235,6 +235,11 @@ def main() -> int:
                         },
                     )
                     n_flags += 1
+            # Mark AFTER the inner loop so future runs skip this comment
+            # whether it produced extractions or an empty list. If
+            # extract_from_comment raised above, we don't reach this line
+            # and the comment will be retried next run.
+            db.mark_comment_extracted(c["id"])
     console.print(
         f"  Extractions: {n_extractions}   "
         f"unique restaurants: {len(seen_place_ids)}   "

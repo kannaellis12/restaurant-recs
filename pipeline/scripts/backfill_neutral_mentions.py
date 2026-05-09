@@ -59,7 +59,7 @@ def backfill_city(
         comments_by_reddit_id = {c["reddit_id"]: c for c in comments}
         for c in comments:
             n_comments_seen += 1
-            if db.comment_has_extractions(c["id"]):
+            if db.comment_has_been_extracted(c["id"]):
                 n_skipped_already_processed += 1
                 continue
 
@@ -121,6 +121,9 @@ def backfill_city(
                         },
                     )
                     n_flags += 1
+            # Mark AFTER the inner loop so future runs skip this comment
+            # whether it produced extractions or an empty list.
+            db.mark_comment_extracted(c["id"])
 
     console.print(
         f"  Comments seen: {n_comments_seen}   "

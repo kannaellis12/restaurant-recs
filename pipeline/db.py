@@ -10,7 +10,7 @@ so the pipeline can be run repeatedly without producing duplicates.
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
@@ -218,13 +218,19 @@ def insert_extraction(
 def delete_extractions_for_comments(comment_ids: list[str]) -> None:
     """Idempotency helper: clear extractions for the given comment UUIDs.
 
+    Also clears `reddit_comments.extracted_at` so the next pipeline run
+    re-attempts extract on these comments. Without that reset, the gate
+    (`comment_has_been_extracted`) would still skip them after the wipe.
+
     Useful when re-running the demo or a reprocessing job — extractions don't
     have a natural unique key (a comment may legitimately produce multiple
     extractions), so we wipe-and-replace rather than upsert.
     """
     if not comment_ids:
         return
-    get_client().table("extractions").delete().in_("comment_id", comment_ids).execute()
+    client = get_client()
+    client.table("extractions").delete().in_("comment_id", comment_ids).execute()
+    client.table("reddit_comments").update({"extracted_at": None}).in_("id", comment_ids).execute()
 
 
 # --- read helpers (used by orchestrator) ------------------------------------
@@ -408,7 +414,14 @@ def update_extraction_sentiment(
 
 
 def comment_has_extractions(comment_id: str) -> bool:
-    """True if any extraction already references this comment."""
+    """True if any extraction already references this comment.
+
+    Use this when you specifically need to know whether extraction rows
+    exist (e.g. retrofit scripts that read existing extractions). For the
+    pipeline's "should I run extract on this comment" gate, prefer
+    `comment_has_been_extracted` — it also skips comments that were
+    processed but produced an empty extraction list, saving the LLM call.
+    """
     r = (
         get_client()
         .table("extractions")
@@ -418,6 +431,39 @@ def comment_has_extractions(comment_id: str) -> bool:
         .execute()
     )
     return (r.count or 0) > 0
+
+
+def comment_has_been_extracted(comment_id: str) -> bool:
+    """True if extract has already considered this comment, regardless of
+    whether it produced any extraction rows.
+
+    The pipeline's idempotency gate. Set by `mark_comment_extracted` after
+    a successful `extract_from_comment` call. Skipping comments that
+    previously produced an empty list is the whole point of this column:
+    those LLM calls are pure cost with zero data change on re-run.
+    """
+    r = (
+        get_client()
+        .table("reddit_comments")
+        .select("extracted_at")
+        .eq("id", comment_id)
+        .limit(1)
+        .execute()
+    )
+    if not r.data:
+        return False
+    return r.data[0].get("extracted_at") is not None
+
+
+def mark_comment_extracted(comment_id: str) -> None:
+    """Stamp `reddit_comments.extracted_at` so future runs skip this
+    comment. Call AFTER `extract_from_comment` returns, regardless of
+    how many extractions came back. If the LLM call itself raises,
+    don't call this — the comment will be retried on the next run.
+    """
+    get_client().table("reddit_comments").update(
+        {"extracted_at": datetime.now(timezone.utc).isoformat()}
+    ).eq("id", comment_id).execute()
 
 
 # --- place_resolutions ------------------------------------------------------
