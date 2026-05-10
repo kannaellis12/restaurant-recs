@@ -22,16 +22,15 @@ from pipeline.models import Extraction, PlaceCandidate, ResolveResult
 
 
 # Transient errors we want to retry on. Supabase / PostgREST sit behind a
-# load balancer that occasionally drops idle HTTP/2 streams or rate-limits a
-# burst of writes during the discover stage. None of those are deterministic
-# bugs in our code — a brief backoff and retry resolves them.
+# load balancer that occasionally drops idle HTTP/2 streams, gets a SSL
+# alert (BAD_RECORD_MAC) on a stale connection, or rate-limits a burst of
+# writes. None of those are deterministic bugs in our code — a brief
+# backoff and retry resolves them. Use httpx parent classes so child
+# exceptions (ReadError, WriteError, ReadTimeout, etc.) are all covered.
 _RETRY_EXCEPTIONS: tuple = (
-    httpx.ReadTimeout,
-    httpx.ConnectTimeout,
-    httpx.WriteTimeout,
+    httpx.TimeoutException,    # parent of Read/Write/Connect/PoolTimeout
+    httpx.NetworkError,        # parent of Read/Write/Connect/CloseError (incl. SSL alerts)
     httpx.RemoteProtocolError,
-    httpx.ConnectError,
-    httpx.PoolTimeout,
 )
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -144,6 +143,7 @@ def upsert_comment(
 # --- restaurants ------------------------------------------------------------
 
 
+@_with_retry()
 def upsert_restaurant(
     *,
     candidate: PlaceCandidate,
@@ -183,6 +183,7 @@ def upsert_restaurant(
 # --- extractions ------------------------------------------------------------
 
 
+@_with_retry()
 def insert_extraction(
     *,
     comment_id: str,
@@ -413,6 +414,7 @@ def update_extraction_sentiment(
     get_client().table("extractions").update(payload).eq("id", extraction_id).execute()
 
 
+@_with_retry()
 def comment_has_extractions(comment_id: str) -> bool:
     """True if any extraction already references this comment.
 
@@ -433,6 +435,7 @@ def comment_has_extractions(comment_id: str) -> bool:
     return (r.count or 0) > 0
 
 
+@_with_retry()
 def comment_has_been_extracted(comment_id: str) -> bool:
     """True if extract has already considered this comment, regardless of
     whether it produced any extraction rows.
@@ -455,6 +458,7 @@ def comment_has_been_extracted(comment_id: str) -> bool:
     return r.data[0].get("extracted_at") is not None
 
 
+@_with_retry()
 def mark_comment_extracted(comment_id: str) -> None:
     """Stamp `reddit_comments.extracted_at` so future runs skip this
     comment. Call AFTER `extract_from_comment` returns, regardless of
@@ -469,6 +473,7 @@ def mark_comment_extracted(comment_id: str) -> None:
 # --- place_resolutions ------------------------------------------------------
 
 
+@_with_retry()
 def insert_place_resolution(
     *,
     mention: str,
@@ -494,6 +499,7 @@ def insert_place_resolution(
 # --- flags (admin reconciliation queue) -------------------------------------
 
 
+@_with_retry()
 def insert_flag(
     *,
     kind: str,
@@ -512,6 +518,7 @@ def insert_flag(
     ).execute()
 
 
+@_with_retry()
 def ensure_missing_cuisine_flag(
     *,
     restaurant_id: str,
