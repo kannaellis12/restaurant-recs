@@ -1,0 +1,26 @@
+# Hand-curated Omaha restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city omaha --urls-file thread-urls/omaha.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/Omaha/comments/1dkv65l/we_only_have_2_days_what_are_the_must_eats/
+https://www.reddit.com/r/Omaha/comments/1pg54b1/what_are_your_musttry_local_restaurants_in_omaha/
+https://www.reddit.com/r/Omaha/comments/1q47r95/what_are_the_best_restaurant_recommendations_for/
+https://www.reddit.com/r/Omaha/comments/1jmjqgu/any_cant_miss_restaurants/
+https://www.reddit.com/r/Omaha/comments/1rng7a2/what_are_great_restaurants_youve_enjoyed_within/
+https://www.reddit.com/r/Omaha/comments/1u0ikwo/best_lunch_in_omaha/
+https://www.reddit.com/r/Omaha/comments/1hw4g99/in_a_more_positive_direction_what_restaurants_in/
+https://www.reddit.com/r/Omaha/comments/1lye8ei/best_restaurants_in_town/
+https://www.reddit.com/r/Omaha/comments/1mc1bz9/omaha_locals_only_the_world_ends_tomorrow_and_you/
+https://www.reddit.com/r/Omaha/comments/1lfvbbc/new_to_omaha_send_me_your_favorite_hidden_gem/
+https://www.reddit.com/r/Omaha/comments/1r2cn30/im_in_town_for_work_i_have_2_associates_1_from/
+https://www.reddit.com/r/Omaha/comments/17ka3ab/what_is_the_coolest_restaurant_youve_been_to_in/
+https://www.reddit.com/r/Omaha/comments/1lm4k7g/most_underrated_restaurants_in_omaha/
+https://www.reddit.com/r/Omaha/comments/1ts3d3d/trying_to_explore_more_since_i_havent_lived_here/
+https://www.reddit.com/r/Omaha/comments/1ij4qds/im_sorry_to_ask_for_restaurant_recommendations/
+https://www.reddit.com/r/Omaha/comments/1sd8x7y/first_time_in_omaha_recs_for_food/
+https://www.reddit.com/r/Omaha/comments/1jbcvam/what_is_your_favorite_single_dish_from_a/
+https://www.reddit.com/r/Omaha/comments/1ov9722/restaurants_recommendations/
+https://www.reddit.com/r/Omaha/comments/1nha9my/local_restaurants/
+https://www.reddit.com/r/Omaha/comments/1u7kskv/going_to_omaha_on_wednesday_night_and_was_looking/
+https://www.reddit.com/r/Omaha/comments/1gwb6ql/in_omaha_for_1_night_where_to_eat_dinner/
+https://www.reddit.com/r/Omaha/comments/1gpksvr/what_are_your_favorite_italian_restaurants_in_town/
+https://www.reddit.com/r/Omaha/comments/1apdt21/ill_be_in_omaha_for_a_night_name_your_top_35/

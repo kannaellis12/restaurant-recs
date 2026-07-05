@@ -1,0 +1,23 @@
+# Hand-curated Seattle restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city seattle --urls-file thread-urls/seattle.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/Seattle/comments/1siuwe1/what_restaurant_in_seattle_is_consistently_1010/
+https://www.reddit.com/r/AskSeattle/comments/1te4qpc/must_eat_in_seattle/
+https://www.reddit.com/r/Seattle/comments/1pp55gr/best_things_youve_eaten_around_seattle_this_year/
+https://www.reddit.com/r/AskSeattle/comments/1sf094q/best_restaurants/
+https://www.reddit.com/r/AskSeattle/comments/1u8svq2/immigrants_of_seattle_what_restaurant_serves_the/
+https://www.reddit.com/r/AskSeattle/comments/1l46u70/best_cannot_miss_restaurant/
+https://www.reddit.com/r/AskSeattle/comments/1r4260h/hidden_food_gems_in_seattle_downtown/
+https://www.reddit.com/r/AskSeattle/comments/1pprhd3/im_looking_for_some_hidden_gem_food_spots_im_not/
+https://www.reddit.com/r/AskSeattle/comments/1nqnh7f/best_restaurant_in_seattle/
+https://www.reddit.com/r/Seattle/comments/1kw9f4b/what_restaurantfood_place_am_i_missing_out_on/
+https://www.reddit.com/r/AskSeattle/comments/1qep518/best_restaurant_downtown/
+https://www.reddit.com/r/AskSeattle/comments/1rfd9x7/best_recommendations_for_casual_dining_in/
+https://www.reddit.com/r/WestSeattleWA/comments/1nbckgp/are_there_hidden_restaurants_that_we_really/
+https://www.reddit.com/r/AskSeattle/comments/1ul1gwi/first_time_in_seattle_local_foodthings_to_do/
+https://www.reddit.com/r/Seattle/comments/16odnb8/whats_the_absolute_best_food_spot_in_town_to_you/
+https://www.reddit.com/r/finedining/comments/1dzylbs/seattle_fine_dining_must_visits/
+https://www.reddit.com/r/Seattle/comments/1kz4mds/great_places_to_eat_after_1020pm/
+https://www.reddit.com/r/finedining/comments/1uikldw/need_help_finding_a_fine_dining_establishment_in/
+https://www.reddit.com/r/SeattleWA/comments/1o6065t/anyone_else_is_seattle_struggle_to_find_good/
+https://www.reddit.com/r/AskSeattle/comments/1kmtvrh/must_eat_at_restaurants/

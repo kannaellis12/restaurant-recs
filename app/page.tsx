@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CITIES } from "@/lib/cities";
+import { CITIES, REGIONS } from "@/lib/cities";
 import { CityRequest, RequestedCityBanner } from "./CityRequest";
 
 export default function Home() {
@@ -52,26 +52,53 @@ export default function Home() {
           &ldquo;that Thai food was too spicy, boo hoo&rdquo; crap.
         </p>
 
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-rule border border-rule">
-          {CITIES.map((city, i) => (
-            <li key={city.slug} className="bg-paper">
-              <Link
-                href={`/${city.slug}`}
-                className="block px-5 py-6 sm:px-6 sm:py-8 hover:bg-paper-2 transition-colors group"
-              >
-                <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mb-3">
-                  {String(i + 1).padStart(2, "0")} / {String(CITIES.length).padStart(2, "0")}
-                </div>
-                <div className="font-display text-[32px] sm:text-h2 leading-none text-ink group-hover:text-accent transition-colors">
-                  {city.name}<span className="text-accent">.</span>
-                </div>
-                <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-3">
-                  {city.country}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {/* Cities grouped into region sections (North America / Europe). Each
+            section is its own 2-column grid with per-card hairline borders:
+            the container draws the top + left edges, each card draws its own
+            right + bottom edge. A section with an odd count leaves a trailing
+            cell with no card — and since only real cards carry borders, that
+            empty cell simply opens to the page instead of being boxed in.
+            The per-card index counts within the section (01 / 07, etc.). */}
+        <div className="flex flex-col gap-10 sm:gap-12">
+          {REGIONS.map((region) => {
+            // Alphabetical within each region. filter() returns a fresh array,
+            // so sorting it doesn't reorder the source CITIES list.
+            const cityList = CITIES.filter((c) => c.region === region).sort(
+              (a, b) => a.name.localeCompare(b.name),
+            );
+            if (cityList.length === 0) return null;
+            return (
+              <div key={region}>
+                <h2 className="font-mono text-mono uppercase tracking-wider text-ink-3 mb-3 flex items-baseline gap-3">
+                  <span className="text-accent">●</span>
+                  <span>{region}</span>
+                  <span className="text-rule-strong">·</span>
+                  <span>{cityList.length}</span>
+                </h2>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 border-t border-l border-rule">
+                  {cityList.map((city, i) => (
+                    <li key={city.slug} className="border-r border-b border-rule">
+                      <Link
+                        href={`/${city.slug}`}
+                        className="block px-5 py-6 sm:px-6 sm:py-7 hover:bg-paper-2 transition-colors group"
+                      >
+                        <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mb-3">
+                          {String(i + 1).padStart(2, "0")} / {String(cityList.length).padStart(2, "0")}
+                        </div>
+                        <div className="font-display text-[32px] sm:text-h2 leading-none text-ink group-hover:text-accent transition-colors">
+                          {city.name}<span className="text-accent">.</span>
+                        </div>
+                        <div className="font-mono text-mono-sm uppercase tracking-wider text-ink-3 mt-3">
+                          {city.country}
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
 
         {/* "Request a city" widget — mobile only on the homepage; the
             desktop nav has a compact version. Locked to Mapbox

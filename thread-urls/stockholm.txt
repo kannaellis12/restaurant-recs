@@ -1,0 +1,31 @@
+# Hand-curated Stockholm restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city stockholm --urls-file thread-urls/stockholm.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/sweden/comments/1n6cgof/must_try_food_in_stockholm/
+https://www.reddit.com/r/TillSverige/comments/1uldsqj/first_time_in_stockholm_where_should_we_eat_no/
+https://www.reddit.com/r/finedining/comments/1u02dsc/stockholm_restaurant_recommendations/
+https://www.reddit.com/r/stockholm/comments/qv6zuk/one_night_in_stockholm_where_do_we_go_to_eat/
+https://www.reddit.com/r/SwedishFood/comments/1pvs5k6/what_is_a_good_swedish_restaurant_in_stockholm/
+https://www.reddit.com/r/finedining/comments/1twnv27/going_to_europe_stockholm_for_the_first_time_help/
+https://www.reddit.com/r/restaurant/comments/1kw1h8a/where_do_chefs_and_foodies_actually_eat_in/
+https://www.reddit.com/r/TillSverige/comments/12i0zmj/best_bangforbucks_restaurants_in_stockholm/
+https://www.reddit.com/r/finedining/comments/1hn29kz/stockholm_recommendations/
+https://www.reddit.com/r/sweden/comments/1kw1o7x/where_do_chefs_and_foodies_actually_eat_in/
+https://www.reddit.com/r/TillSverige/comments/1tvmsre/any_hole_in_the_wall_good_restaurants/
+https://www.reddit.com/r/SwedishFood/comments/1thmfvc/stockholm_restaurants_for_a_finn_not_traditional/
+https://www.reddit.com/r/stockholm/comments/1fya9p2/cheapest_places_to_eat_and_visit_in_stockholm/
+https://www.reddit.com/r/sweden/comments/1lej3dh/whats_the_best_restaurant_in_sweden/
+https://www.reddit.com/r/finedining/comments/1n6pao9/good_cheap_supercasual_spots_in_stockholm/
+https://www.reddit.com/r/TillSverige/comments/1ui4s52/visiting_stockholm/
+https://www.reddit.com/r/finedining/comments/1jl6mkr/stockholm_tasting_menu/
+https://www.reddit.com/r/travel/comments/1s7xl5b/cheap_eats_in_stockholm/
+https://www.reddit.com/r/stockholm/comments/148cswo/best_meatballs/
+https://www.reddit.com/r/finedining/comments/1l2m01w/stockholm_restaurants_in_july/
+https://www.reddit.com/r/finedining/comments/1beiagp/stockholm_recommendations/
+https://www.reddit.com/r/burgers/comments/1to620f/my_trip_to_stockholm_summarized/
+https://www.reddit.com/r/stockholm/comments/1n2a1um/where_to_get_cheap_meals_in_stockholm/
+https://www.reddit.com/r/stockholm/comments/158d6pn/great_lunch_in_gamla_stan/
+https://www.reddit.com/r/stockholm/comments/179wqvi/affordable_place_to_eat/
+https://www.reddit.com/r/finedining/comments/1d3m3ve/stockholm_suggestions_and_ettiquette/
+https://www.reddit.com/r/finedining/comments/1sdegs5/last_lunch_or_dinner_in_stockholm/
+https://www.reddit.com/r/finedining/comments/1j1xtom/recommendations_for_michelin_in_stockholm/

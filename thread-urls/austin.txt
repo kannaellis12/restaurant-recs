@@ -1,0 +1,25 @@
+# Hand-curated Austin restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city austin --urls-file thread-urls/austin.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/austinfood/comments/1u45iq3/what_restaurant_in_austin_is_consistently_1010/
+https://www.reddit.com/r/austinfood/comments/1uiu0n4/musteatunique_restaurants_in_austin/
+https://www.reddit.com/r/AustinTX/comments/1u8bvm5/i_made_a_list_of_pretty_much_every_restaurant_in/
+https://www.reddit.com/r/austinfood/comments/1lo7k5j/favorite_spots_in_downtown_austin/
+https://www.reddit.com/r/austinfood/comments/1sq2lcw/before_leaving_austin_what_restaurant_should_i_try/
+https://www.reddit.com/r/austinfood/comments/1szwajx/on_the_other_hand_what_are_some_austin/
+https://www.reddit.com/r/austinfood/comments/1nnq7kg/your_top_10_restaurants_in_austin/
+https://www.reddit.com/r/austinfood/comments/12nnl3k/what_is_the_most_austin_of_austin_restaurants/
+https://www.reddit.com/r/austinfood/comments/1u91tno/immigrants_of_austin_what_restaurant_serves_the/
+https://www.reddit.com/r/austinfood/comments/1ulu5b9/austin_for_a_day_food_rec/
+https://www.reddit.com/r/austinfood/comments/1lgzinm/south_austin_best_local_eats/
+https://www.reddit.com/r/askaustin/comments/1txysvv/what_are_the_top_3_quintessential_austin/
+https://www.reddit.com/r/Austin/comments/1jq1pgr/what_is_your_favorite_restaurant_that_you_think/
+https://www.reddit.com/r/austinfood/comments/1qz93wl/any_neatunique_restaurant_recommendations_not_in/
+https://www.reddit.com/r/austinfood/comments/1b9aqr3/fun_cool_unique_restaurants/
+https://www.reddit.com/r/austinfood/comments/1hs5oxq/best_restaurant_you_visited_in_austin_in_2024/
+https://www.reddit.com/r/austinfood/comments/1edv7ud/i_tried_out_100_restaurants_in_the_greater_austin/
+https://www.reddit.com/r/austinfood/comments/1rq915o/what_are_your_favorite_local_austin_restaurants/
+https://www.reddit.com/r/austinfood/comments/1tb87uj/the_25_best_asian_restaurants_in_austin_from/
+https://www.reddit.com/r/austinfood/comments/1rfizk9/austins_best_casual_restaurants_where_you_can/
+https://www.reddit.com/r/austinfood/comments/1hnqc1l/casual_but_delicious_restaurant/
+https://www.reddit.com/r/austinfood/comments/1ok1lor/restaurants_in_austin_that_dont_blast_your_head/

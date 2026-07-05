@@ -1,0 +1,32 @@
+# Hand-curated Tallinn restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city tallinn --urls-file thread-urls/tallinn.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/Eesti/comments/1t3kzge/visiting_tallinn_for_a_week_where_to_eat/
+https://www.reddit.com/r/Eesti/comments/1oo2jcd/tallinn_where_to_eat_what_to_see/
+https://www.reddit.com/r/Eesti/comments/1hie5qn/where_do_locals_eat_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1me9awi/affordable_places_to_eat_in_tallinn_where_locals/
+https://www.reddit.com/r/Eesti/comments/1mmcp8x/where_to_eat_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1tria3d/tallinn_dinner_suggestions_the_place_i_wanted_to/
+https://www.reddit.com/r/Eesti/comments/p3s8dm/tallinn_locals_what_hidden_gem_would_you/
+https://www.reddit.com/r/Eesti/comments/1e8t5mi/true_estonian_food_restaurant_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1ubnzxd/romantic_dinner_recommendations_in_tallinn_sunday/
+https://www.reddit.com/r/Eesti/comments/13ar97t/where_can_i_eat_good_and_not_expensive_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1gbri18/best_unique_restaurants_in_tallinn/
+https://www.reddit.com/r/MichelinStars/comments/1ks6n31/tallinn_experience/
+https://www.reddit.com/r/Eesti/comments/1nih8zs/cheap_food_spots_in_tallinn_and_tartu/
+https://www.reddit.com/r/Eesti/comments/1mbiivw/visiting_tallinn_in_one_week_would_appreciate/
+https://www.reddit.com/r/Eesti/comments/1cskf6w/favorite_dinner_places_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1ml6b05/looking_for_traditional_estonian_food_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1qxpz5v/food_in_tallin/
+https://www.reddit.com/r/Eesti/comments/1px9oe3/is_it_really_that_every_restaurant_kitchen_closes/
+https://www.reddit.com/r/cozy/comments/1lsg20x/dinner_in_tallinn_estonia/
+https://www.reddit.com/r/Eesti/comments/1cm6s9o/favorite_lunch_places_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/12eniu9/great_places_to_eat_and_drink_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/1i0127h/any_recommendation_to_eat_good_food_for/
+https://www.reddit.com/r/Eesti/comments/1fztche/fav_restaurants_tallinn/
+https://www.reddit.com/r/Eesti/comments/1lcnqih/calling_all_hipsters_of_tallinn_advise_for/
+https://www.reddit.com/r/Eesti/comments/10ysnx4/restaurants_and_bars_in_tallinn/
+https://www.reddit.com/r/Eesti/comments/14s5m9g/affordable_place_for_dinner_in_tallinn/
+https://www.reddit.com/r/finedining/comments/1j1acal/tallinn_estonia/
+https://www.reddit.com/r/Eesti/comments/1bcvrqh/simple_tallinn_counterserve_restaurants_serving/
+https://www.reddit.com/r/Eesti/comments/1mgjh3g/my_trip_to_estonia_tallin/

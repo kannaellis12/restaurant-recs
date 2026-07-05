@@ -1,0 +1,32 @@
+# Hand-curated Brooklyn restaurant threads. Imported via:
+#   python -m pipeline.scripts.import_threads --city brooklyn --urls-file thread-urls/brooklyn.txt
+# Lines starting with # are ignored. One Reddit thread URL per line.
+https://www.reddit.com/r/FoodNYC/comments/1ml1xfh/40_year_nyc_resident_here_are_my_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/1ki3l7t/what_brooklyn_restaurant_wowd_you_recently/
+https://www.reddit.com/r/FoodNYC/comments/1iztbbz/hole_in_the_wall_restaurants_in_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/xyj7qi/you_have_one_night_in_brooklyn_heights_what_are/
+https://www.reddit.com/r/FoodNYC/comments/1uee3ck/which_restaurants_recently_exceeded_your/
+https://www.reddit.com/r/FoodNYC/comments/1qa6jfm/visiting_nyc_after_14_years_looking_for_a_great/
+https://www.reddit.com/r/Brooklyn/comments/1s1z0r7/brooklyn_must_eatdrinkdo/
+https://www.reddit.com/r/Brooklyn/comments/1m4ugti/where_to_eat_in_the_williamsburg_area/
+https://www.reddit.com/r/Brooklyn/comments/1izlmgk/is_there_a_must_eat_restaurant/
+https://www.reddit.com/r/visitingnyc/comments/1or5juh/what_are_your_must_try_places_in_brooklyn/
+https://www.reddit.com/r/Brooklyn/comments/aogxjy/classic_brooklyn_restaurants/
+https://www.reddit.com/r/Brooklyn/comments/1dj85s8/restaurant_suggestions/
+https://www.reddit.com/r/FoodNYC/comments/1akkq1b/best_of_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/1rsp9fa/deinfluence_mebrooklyn_restaurant_edition/
+https://www.reddit.com/r/FoodNYC/comments/1j0auwm/downtown_brooklyn_date_recommendations/
+https://www.reddit.com/r/FoodNYC/comments/1kv2tbq/brooklyn_lunch/
+https://www.reddit.com/r/newyorkcity/comments/1g7efc7/food_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/1ot62dt/brooklyn_food_recs_needed/
+https://www.reddit.com/r/Brooklyn/comments/1ow1tyu/looking_for_recommendations_restaurant_for/
+https://www.reddit.com/r/FoodNYC/comments/1dprzff/first_time_in_brooklyn_recs/
+https://www.reddit.com/r/Brooklyn/comments/1r5dtnu/any_brooklyn_restauranteurs_on_here/
+https://www.reddit.com/r/Brooklyn/comments/1tjrz9v/restaurants_to_try_in_sunset_parkpark/
+https://www.reddit.com/r/FoodNYC/comments/u55b2k/if_you_only_had_a_day_a_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/1rgkzp8/why_are_nearly_all_of_the_highly_recommended_food/
+https://www.reddit.com/r/FoodNYC/comments/1j4djps/what_obvious_concentrated_ethnic_food_experiences/
+https://www.reddit.com/r/FoodNYC/comments/1eoe7hv/recommendation_in_brooklyn/
+https://www.reddit.com/r/Poopfromabutt/comments/1ujuy8g/brooklyn_eats_different/
+https://www.reddit.com/r/Brooklyn/comments/u74zm4/your_best_day_of_eating_drinking_through_brooklyn/
+https://www.reddit.com/r/FoodNYC/comments/1mbz1mi/brooklyn_roots_italian_in_bay_ridge_outstanding/

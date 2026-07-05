@@ -80,10 +80,22 @@ export async function searchPlacesForReassign(
   citySlug: string,
   query: string,
 ): Promise<PlaceLite[]> {
-  const city = CITIES_BY_SLUG[citySlug];
-  if (!city) throw new Error(`Unknown city slug: ${citySlug}`);
   if (!query.trim()) return [];
-  return searchPlaces(query.trim(), city.center, { max: 5 });
+  // City center biases the Places search. Prefer the frontend CITIES list
+  // (no DB hit), but fall back to the DB `cities` table so the admin works
+  // for cities that have been ingested but not yet published to the homepage
+  // (they're absent from lib/cities.ts on purpose until they have data).
+  let center = CITIES_BY_SLUG[citySlug]?.center;
+  if (!center) {
+    const { data } = await adminClient()
+      .from("cities")
+      .select("center_lng, center_lat")
+      .eq("slug", citySlug)
+      .single();
+    if (data) center = [data.center_lng, data.center_lat];
+  }
+  if (!center) throw new Error(`Unknown city slug: ${citySlug}`);
+  return searchPlaces(query.trim(), center, { max: 5 });
 }
 
 /**

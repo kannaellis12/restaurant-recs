@@ -5,6 +5,7 @@ import mapboxgl, { type Map as MapboxMap, type Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { City } from "@/lib/cities";
 import type { RestaurantSummary } from "@/lib/types";
+import type { Camera } from "./viewState";
 
 export type MapBounds = {
   west: number;
@@ -33,6 +34,19 @@ type Props = {
    */
   onBoundsChange?: (bounds: MapBounds) => void;
   /**
+   * Fires alongside onBoundsChange with the current center + zoom. CityView
+   * persists this so a zoomed-in view survives navigating to a detail page
+   * and back (see viewState.ts).
+   */
+  onCameraChange?: (camera: Camera) => void;
+  /**
+   * When present, the map opens at this camera instead of the city default —
+   * restores a previously zoomed-in view on a return visit. Read once at
+   * map init; later changes to the prop are ignored (the user is driving
+   * the camera by then).
+   */
+  initialCamera?: Camera | null;
+  /**
    * Fires only when the user actively starts dragging or zooming the
    * map (not on programmatic flyTo). CityView uses this on mobile to
    * dismiss the pin-preview card as soon as the user goes back to
@@ -59,12 +73,17 @@ export function CityMap({
   hoveredId,
   onSelect,
   onBoundsChange,
+  onCameraChange,
+  initialCamera,
   onUserInteractStart,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Captured once — the restored camera only matters at map creation. After
+  // that the user (or a flyTo) owns the camera, so a changed prop is ignored.
+  const initialCameraRef = useRef(initialCamera);
 
   // Initialize the map exactly once. We gate marker work behind `mapLoaded`
   // because Mapbox's projection isn't ready until the 'load' event fires —
@@ -85,21 +104,25 @@ export function CityMap({
       // Editorial paper-on-ink style from the design handoff. Hides default
       // food POIs so our pins are the only food markers on the map.
       style: "/mapbox-style.json",
-      center: city.center,
-      zoom: city.zoom,
+      // A restored camera (from a return visit) wins over the city default.
+      center: initialCameraRef.current?.center ?? city.center,
+      zoom: initialCameraRef.current?.zoom ?? city.zoom,
     });
     mapRef.current = map;
 
     const emitBounds = () => {
-      if (!onBoundsChange) return;
       const b = map.getBounds();
       if (!b) return;
-      onBoundsChange({
+      onBoundsChange?.({
         west: b.getWest(),
         south: b.getSouth(),
         east: b.getEast(),
         north: b.getNorth(),
       });
+      if (onCameraChange) {
+        const c = map.getCenter();
+        onCameraChange({ center: [c.lng, c.lat], zoom: map.getZoom() });
+      }
     };
 
     const onLoad = () => {
@@ -140,8 +163,10 @@ export function CityMap({
       mapRef.current = null;
       setMapLoaded(false);
     };
-    // We intentionally exclude `onBoundsChange` from deps — re-running this
-    // effect would tear down and re-create the map on every render.
+    // We intentionally exclude the callbacks (`onBoundsChange`,
+    // `onCameraChange`) from deps — re-running this effect would tear down
+    // and re-create the map on every render. They're stable setState-style
+    // callbacks, so the versions captured at init stay correct.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city.center, city.zoom]);
 

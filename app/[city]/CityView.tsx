@@ -20,6 +20,7 @@ import { CityMap, type MapBounds } from "./CityMap";
 import { FilterBar } from "./FilterBar";
 import { TagPicks } from "./TagPicks";
 import { RequestedCityBanner } from "../CityRequest";
+import { loadViewState, saveViewState, type Camera } from "./viewState";
 
 type Props = {
   city: City;
@@ -30,28 +31,52 @@ const PAGE_SIZE = 50;
 
 export function CityView({ city, restaurants }: Props) {
   const searchParams = useSearchParams();
+
+  // Detail-page chips deep-link into a pre-applied filter
+  // (e.g. /denver?cuisine=italian, ?tag=date_night). We split on commas so a
+  // future link could pre-select multiple options. A present deep-link is an
+  // explicit "show me exactly this" intent, so it wins over any persisted
+  // session view (restored filters + map camera) below.
+  const deepLink = useMemo(() => {
+    const splitParam = (raw: string | null): string[] =>
+      raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const cuisines = splitParam(searchParams.get("cuisine"));
+    const neighborhoods = splitParam(searchParams.get("neighborhood"));
+    const tags = splitParam(searchParams.get("tag")) as Filters["tags"];
+    return {
+      cuisines,
+      neighborhoods,
+      tags,
+      present:
+        cuisines.length > 0 || neighborhoods.length > 0 || tags.length > 0,
+    };
+  }, [searchParams]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
-  // Initial filter state honors URL params so detail-page chips can deep-link
-  // back into a pre-applied filter (e.g. /denver?cuisine=italian, ?tag=date_night).
-  // After mount the filters live in local state — we don't keep them in sync
-  // with the URL on subsequent changes.
-  const [filters, setFilters] = useState<Filters>(() => {
-    // Deep links from the detail page pass single comma-free values
-    // (e.g. /denver?cuisine=italian, ?tag=date_night). We still split on
-    // commas so a future link could pre-select multiple options.
-    const splitParam = (raw: string | null): string[] =>
-      raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    return {
-      ...EMPTY_FILTERS,
-      cuisines: splitParam(searchParams.get("cuisine")),
-      neighborhoods: splitParam(searchParams.get("neighborhood")),
-      tags: splitParam(searchParams.get("tag")) as Filters["tags"],
-    };
-  });
+  // Initial filter state honors deep-link params so chips work. On a return
+  // visit (browser back) the persisted session view is restored instead, in
+  // the hydrate effect below — we can't do that synchronously here because
+  // sessionStorage is client-only and reading it during the initial render
+  // would desync SSR/hydration.
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...EMPTY_FILTERS,
+    cuisines: deepLink.cuisines,
+    neighborhoods: deepLink.neighborhoods,
+    tags: deepLink.tags,
+  }));
   const [searchQuery, setSearchQuery] = useState("");
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  // Restored map camera. Unlike filters, this is safe to read from storage
+  // synchronously: it's consumed only by CityMap's client-only init effect
+  // (never rendered into HTML), so it can't cause a hydration mismatch — and
+  // reading it here lets the map open directly at the zoomed-in view instead
+  // of flashing through the city-wide default first.
+  const [initialCamera] = useState<Camera | null>(() =>
+    deepLink.present ? null : loadViewState(city.slug)?.camera ?? null,
+  );
+  const [camera, setCamera] = useState<Camera | null>(initialCamera);
   const [page, setPage] = useState(1);
   // Mobile-only: which of the two stacked panes (list / map) is showing.
   // On md+ both render side-by-side and this state is ignored. Default
@@ -73,6 +98,35 @@ export function CityView({ city, restaurants }: Props) {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  // Restore the persisted session view (filters / sort / search) on a return
+  // visit so navigating to a detail page and hitting back doesn't wipe the
+  // user's filters. Runs once on mount. Deep-link chips take precedence and
+  // skip restore. The map camera is restored separately via `initialCamera`
+  // (at map init) so it doesn't flash through the city-wide default first.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    if (!deepLink.present) {
+      const saved = loadViewState(city.slug);
+      if (saved) {
+        setFilters(saved.filters);
+        setSortKey(saved.sortKey);
+        setSearchQuery(saved.searchQuery);
+      }
+    }
+    setHydrated(true);
+    // Mount-only: read the snapshot once. `deepLink`/`city.slug` are fixed for
+    // the life of a given city page mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the view whenever it changes, so browser-back can restore it.
+  // Gated on `hydrated` so the initial default-state render doesn't clobber
+  // the saved snapshot before the restore above has applied it.
+  useEffect(() => {
+    if (!hydrated) return;
+    saveViewState(city.slug, { filters, sortKey, searchQuery, camera });
+  }, [hydrated, city.slug, filters, sortKey, searchQuery, camera]);
 
   const availableCuisines = useMemo(() => {
     const s = new Set<string>();
@@ -405,6 +459,8 @@ export function CityView({ city, restaurants }: Props) {
             hoveredId={hoveredId}
             onSelect={setSelectedId}
             onBoundsChange={setMapBounds}
+            onCameraChange={setCamera}
+            initialCamera={initialCamera}
             // On mobile, panning or zooming the map should dismiss the
             // pin-preview card the same way Airbnb's mobile map does.
             // Desktop has the list visible alongside, so a sticky

@@ -201,7 +201,7 @@ def _run_actor(
         "searchComments": False,
         "searchCommunities": False,
         "searchUsers": False,
-        "scrollTimeout": 30,
+        "scrollTimeout": 10,
         "maxItems": max_posts * (max_comments_per_post + 1),
         "maxPostCount": max_posts,
         "maxComments": max_comments_per_post,
@@ -222,11 +222,11 @@ def _run_actor(
     dataset_id = run["defaultDatasetId"]
 
     # Poll until terminal state.
-    deadline = time.time() + 600  # 10 min cap
+    deadline = time.time() + 1800  # 30 min cap — headroom for 28-30-URL cities
     status = run["status"]
     while status not in ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"):
         if time.time() > deadline:
-            raise TimeoutError(f"Apify run {run_id} did not finish within 10 minutes")
+            raise TimeoutError(f"Apify run {run_id} did not finish within 30 minutes")
         time.sleep(5)
         r = httpx.get(
             f"https://api.apify.com/v2/actor-runs/{run_id}", headers=auth, timeout=30
@@ -372,7 +372,7 @@ def discover_threads(
         "searchComments": False,
         "searchCommunities": False,
         "searchUsers": False,
-        "scrollTimeout": 30,
+        "scrollTimeout": 10,
         "maxItems": len(new_urls) * (max_comments_per_post + 1),
         "maxPostCount": len(new_urls),
         "maxComments": max_comments_per_post,
@@ -491,11 +491,11 @@ def _run_actor_with_input(actor_input: dict) -> list:
     run_id = run["id"]
     dataset_id = run["defaultDatasetId"]
 
-    deadline = time.time() + 600
+    deadline = time.time() + 1800  # 30 min cap — headroom for 28-30-URL cities
     status = run["status"]
     while status not in ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"):
         if time.time() > deadline:
-            raise TimeoutError(f"Apify run {run_id} did not finish within 10 minutes")
+            raise TimeoutError(f"Apify run {run_id} did not finish within 30 minutes")
         time.sleep(5)
         r = httpx.get(
             f"https://api.apify.com/v2/actor-runs/{run_id}",
